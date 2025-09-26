@@ -39,158 +39,167 @@ class _BookingHomePageState extends State<BookingHomePage> {
         return Scaffold(
           key: _scaffoldKey,
           drawer: Drawer(
-            child: Column(
-              children: [
-                DrawerHeader(
-                  decoration: const BoxDecoration(
-                    color: AppColors.card,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.border,
-                            width: 2,
+            // remove elevation (no dropshadow) and ensure no border radius
+            elevation: 0,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.zero,
+            ),
+            backgroundColor: AppColors.white,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Custom header container (no bottom border/line)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    color: AppColors.white, // same as drawer background to avoid any line effect
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.border,
+                              width: 1,
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(30),
+                            child: Image.network(
+                              'https://via.placeholder.com/60x60/CCCCCC/FFFFFF?text=U',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: AppColors.white,
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: AppColors.placeholder,
+                                    size: 30,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(30),
-                          child: Image.network(
-                            'https://via.placeholder.com/60x60/CCCCCC/FFFFFF?text=U',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: AppColors.white,
-                                child: const Icon(
-                                  Icons.person,
-                                  color: AppColors.placeholder,
-                                  size: 30,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text(
+                                'User Name',
+                                style: TextStyle(
+                                  color: AppColors.black,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                              );
-                            },
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'user@example.com',
+                                style: TextStyle(
+                                  color: AppColors.black,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'User Name',
+                      ],
+                    ),
+                  ),
+
+                  // Menu items
+                  Expanded(
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      children: [
+                        // Use subtle spacing and consistent dividers to keep it elegant
+                        ListTile(
+                          leading: const Icon(Icons.book, color: AppColors.primary),
+                          title: const Text(
+                            'Bookings',
                             style: TextStyle(
-                              color: AppColors.black,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          Text(
-                            'user@example.com',
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                        const Divider(color: AppColors.border, height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.chat, color: AppColors.primary),
+                          title: const Text(
+                            'Chat',
                             style: TextStyle(
-                              color: AppColors.black,
-                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ],
-                      ),
-                    ],
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                        const Divider(color: AppColors.border, height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.help, color: AppColors.primary),
+                          title: const Text(
+                            'Help',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                        const Divider(color: AppColors.border, height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.settings, color: AppColors.primary),
+                          title: const Text(
+                            'Settings',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                        const Divider(color: AppColors.border, height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.article, color: AppColors.primary),
+                          title: const Text(
+                            'Terms and Conditions',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                        const Divider(color: AppColors.border, height: 1),
+                        ListTile(
+                          leading: const Icon(Icons.privacy_tip, color: AppColors.primary),
+                          title: const Text(
+                            'Privacy Policy',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: ListView(
-                    padding: EdgeInsets.zero,
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.book, color: AppColors.primary),
-                        title: const Text(
-                          'Bookings',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onTap: () {
-                          // Navigate to Bookings page
-                          Navigator.pop(context);
-                        },
-                      ),
-                      const Divider(color: AppColors.border),
-                      ListTile(
-                        leading: const Icon(Icons.chat, color: AppColors.primary),
-                        title: const Text(
-                          'Chat',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onTap: () {
-                          // Navigate to Chat page
-                          Navigator.pop(context);
-                        },
-                      ),
-                      const Divider(color: AppColors.border),
-                      ListTile(
-                        leading: const Icon(Icons.help, color: AppColors.primary),
-                        title: const Text(
-                          'Help',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onTap: () {
-                          // Navigate to Help page
-                          Navigator.pop(context);
-                        },
-                      ),
-                      const Divider(color: AppColors.border),
-                      ListTile(
-                        leading: const Icon(Icons.settings, color: AppColors.primary),
-                        title: const Text(
-                          'Settings',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onTap: () {
-                          // Navigate to Settings page
-                          Navigator.pop(context);
-                        },
-                      ),
-                      const Divider(color: AppColors.border),
-                      ListTile(
-                        leading: const Icon(Icons.article, color: AppColors.primary),
-                        title: const Text(
-                          'Terms and Conditions',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onTap: () {
-                          // Navigate to Terms and Conditions page
-                          Navigator.pop(context);
-                        },
-                      ),
-                      const Divider(color: AppColors.border),
-                      ListTile(
-                        leading: const Icon(Icons.privacy_tip, color: AppColors.primary),
-                        title: const Text(
-                          'Privacy Policy',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        onTap: () {
-                          // Navigate to Privacy Policy page
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           body: Stack(
@@ -221,7 +230,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
                       ),
                       child: IconButton(
                         onPressed: () {
-                          // Handle sidebar menu
                           _scaffoldKey.currentState!.openDrawer();
                         },
                         icon: const Icon(
