@@ -1,3 +1,4 @@
+// booking_bottom_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sot/core/config/app_colors.dart';
@@ -24,7 +25,7 @@ class BookingBottomSheet extends StatelessWidget {
         minChildSize: 1.0,
         maxChildSize: 1.0,
         expand: false,
-        builder: (context, scrollController) => LocationSelectionPage(editIndex: editIndex),
+        builder: (context, scrollController) => LocationSelectionPage(editIndex: editIndex, googleMapsApiKey: 'AIzaSyCPhfNzOVaHkHU7ewiwJGUvf8CxtYD3Mz8',),
       ),
     );
   }

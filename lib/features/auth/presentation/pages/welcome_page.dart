@@ -1,3 +1,4 @@
+// lib/features/auth/presentation/pages/welcome_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -18,10 +19,17 @@ class WelcomePage extends StatelessWidget {
     final spacingAboveBelowCars = screenWidth * 0.12; // Responsive ~48px
     final carsSvgWidth = screenWidth; // Full width without cuts
 
-    return BlocProvider(
-      create: (_) => AuthCubit(),
+    return BlocListener<AuthCubit, AuthState>(
+      listener: (context, state) {
+        if (state is AuthSuccess) {
+          Navigator.pushNamed(context, AppRoutes.bookingHome);
+        } else if (state is AuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+        }
+      },
       child: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, state) {
+          final bool isLoading = state is AuthLoading;
           return Scaffold(
             backgroundColor: AppColors.white,
             body: SafeArea(
@@ -96,10 +104,12 @@ class WelcomePage extends StatelessWidget {
                   const SizedBox(height: 10),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: CustomButton(
+                    child: isLoading
+                        ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                        : CustomButton(
                       text: 'Continue as Guest',
                       onPressed: () {
-                        // TODO: Navigate to guest flow
+                        context.read<AuthCubit>().guestLogin();
                       },
                       color: AppColors.black,
                       height: 64.0,

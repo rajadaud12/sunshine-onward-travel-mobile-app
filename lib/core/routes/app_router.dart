@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sot/core/routes/app_routes.dart';
 import 'package:sot/features/auth/presentation/pages/create_password_page.dart';
+import 'package:sot/features/auth/presentation/pages/forget_password_page.dart';
 import 'package:sot/features/auth/presentation/pages/otp_page.dart';
 import 'package:sot/features/auth/presentation/pages/sign_in_page.dart';
 import 'package:sot/features/auth/presentation/pages/sign_up_page.dart';
@@ -8,6 +9,7 @@ import 'package:sot/features/booking/presentation/pages/booking_home_page.dart';
 import 'package:sot/features/booking/presentation/pages/booking_summary_page.dart';
 import 'package:sot/features/booking/presentation/pages/payment_method_page.dart';
 import 'package:sot/features/booking/presentation/widgets/booking_location_summary.dart';
+import 'package:sot/features/booking_history/presentation/pages/booking_history_page.dart';
 import 'package:sot/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:sot/features/auth/presentation/pages/welcome_page.dart';
 
@@ -43,13 +45,13 @@ class AppRouter {
       case AppRoutes.paymentMethod:
         return MaterialPageRoute(builder: (_) => const PaymentMethodPage());
 
+      case AppRoutes.bookings:
+        return MaterialPageRoute(builder: (_) => const BookingsPage());
+
+      case AppRoutes.forgotPassword:
+        return MaterialPageRoute(builder: (_) => const ForgotPasswordPage());
 
 
-
-      case AppRoutes.profile:
-        return MaterialPageRoute(
-          builder: (_) => const Scaffold(body: Center(child: Text("Profile Page"))),
-        );
 
       default:
         return MaterialPageRoute(

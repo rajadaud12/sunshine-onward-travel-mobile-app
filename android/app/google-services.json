@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "83863076737",
+    "project_id": "sunshineonwardtravel-80d8e",
+    "storage_bucket": "sunshineonwardtravel-80d8e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:83863076737:android:40934e3fef586a31277280",
+        "android_client_info": {
+          "package_name": "com.example.sot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDltzAQLIHfuTBKPVIK-jn6TsV_R2L2DJc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,3 +1,4 @@
+// lib/features/auth/state/auth_state.dart
 import 'package:equatable/equatable.dart';
 
 abstract class AuthState extends Equatable {
@@ -15,6 +16,14 @@ class AuthInitial extends AuthState {
 
 class AuthLoading extends AuthState {
   const AuthLoading({String? email}) : super(email: email);
+}
+
+class AuthOtpSent extends AuthState {
+  const AuthOtpSent({required String email}) : super(email: email);
+}
+
+class AuthOtpVerified extends AuthState {
+  const AuthOtpVerified({required String email}) : super(email: email);
 }
 
 class AuthSuccess extends AuthState {

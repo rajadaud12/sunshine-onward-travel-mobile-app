@@ -1,3 +1,4 @@
+// lib/features/auth/presentation/pages/sign_up_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -28,12 +29,29 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your email';
+    }
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+      return 'Please enter a valid email';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => AuthCubit(),
+    return BlocListener<AuthCubit, AuthState>(  // Use global cubit
+      listener: (context, state) {
+        if (state is AuthOtpSent) {
+          Navigator.pushNamed(context, AppRoutes.otp);
+        } else if (state is AuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+        }
+      },
       child: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, state) {
+          final bool isLoading = state is AuthLoading;
           return Scaffold(
             backgroundColor: AppColors.white,
             appBar: AppBar(
@@ -120,21 +138,16 @@ class _SignUpPageState extends State<SignUpPage> {
                             label: 'Email',
                             hintText: 'Enter your Email',
                             controller: _emailController,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              return null;
-                            },
+                            validator: _validateEmail,
                           ),
                           const SizedBox(height: 32),
-                          CustomButton(
+                          isLoading
+                              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                              : CustomButton(
                             text: 'Get OTP',
                             onPressed: () {
                               if (_formKey.currentState!.validate()) {
-                                final authCubit = context.read<AuthCubit>();
-                                authCubit.setEmail(_emailController.text);
-                                Navigator.pushNamed(context, AppRoutes.otp);
+                                context.read<AuthCubit>().sendOtp(_emailController.text, _nameController.text);
                               }
                             },
                             color: AppColors.primary,
@@ -165,16 +178,18 @@ class _SignUpPageState extends State<SignUpPage> {
                             ],
                           ),
                           const SizedBox(height: 24),
-                          GoogleButton(
+                          isLoading
+                              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                              : GoogleButton(
                             onPressed: () {
-                              // TODO: Google sign up
+                              context.read<AuthCubit>().googleLogin();
                             },
                           ),
                           const SizedBox(height: 16),
                           Center(
                             child: TextButton(
                               onPressed: () {
-                                // TODO: Navigate to sign in
+                                Navigator.pushNamed(context, AppRoutes.signIn);
                               },
                               child: RichText(
                                 text: TextSpan(

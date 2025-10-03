@@ -1,6 +1,8 @@
+// lib/features/auth/presentation/pages/create_password_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sot/core/config/app_colors.dart';
+import 'package:sot/core/routes/app_routes.dart';
 import 'package:sot/core/widgets/buttons.dart';
 import 'package:sot/core/widgets/custom_text_field.dart';
 import 'package:sot/features/auth/state/auth_cubit.dart';
@@ -29,10 +31,18 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => AuthCubit(),
+    return BlocListener<AuthCubit, AuthState>(
+      listener: (context, state) {
+        if (state is AuthSuccess) {
+          Navigator.pushNamed(context, AppRoutes.bookingHome);
+        } else if (state is AuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+        }
+      },
       child: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, state) {
+          final emailToShow = state.email ?? 'No email found';
+          final bool isLoading = state is AuthLoading;
           return Scaffold(
             backgroundColor: AppColors.white,
             appBar: AppBar(
@@ -54,7 +64,7 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
               ),
             ),
             body: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -65,6 +75,15 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppColors.black,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    // Show the email being used (helps debugging & UX)
+                    Text(
+                      'Account: $emailToShow',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -97,6 +116,7 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your password';
                         }
+                        if (value.length < 6) return 'Password must be at least 6 characters';
                         return null;
                       },
                     ),
@@ -128,11 +148,19 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                       },
                     ),
                     const SizedBox(height: 32),
-                    CustomButton(
+                    isLoading
+                        ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                        : CustomButton(
                       text: 'Sign Up',
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
-                          // TODO: Create password and complete sign up
+                          final String? email = state.email;
+                          print('CreatePasswordPage -> Sign Up pressed. email: $email');
+                          // Pass email explicitly to createAccount to avoid any ambiguity
+                          context.read<AuthCubit>().createAccount(
+                            _passwordController.text,
+                            email: email,
+                          );
                         }
                       },
                       color: AppColors.primary,

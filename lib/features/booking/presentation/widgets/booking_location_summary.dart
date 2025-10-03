@@ -1,5 +1,4 @@
-// presentation/widgets/booking_location_summary_fixed.dart
-
+// booking_location_summary.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sot/core/config/app_colors.dart';
@@ -26,7 +25,7 @@ class BookingLocationSummary extends StatelessWidget {
         maxChildSize: 1.0,
         expand: false,
         builder: (context, scrollController) =>
-            LocationSelectionPage(editIndex: editIndex),
+            LocationSelectionPage(editIndex: editIndex, googleMapsApiKey: 'AIzaSyCPhfNzOVaHkHU7ewiwJGUvf8CxtYD3Mz8',),
       ),
     );
   }

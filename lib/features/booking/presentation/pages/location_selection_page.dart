@@ -1,22 +1,26 @@
 // location_selection_page.dart
-// Adjusted to use editIndex instead of selectionType for elegance and support for waypoints.
-// Updated to handle map-tapped locations with a placeholder name and prepare for reverse geocoding.
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart' as lat_lng;
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sot/core/config/app_colors.dart';
 import 'package:sot/features/booking/state/booking_cubit.dart';
 import 'package:sot/features/booking/state/booking_state.dart';
+import 'package:http/http.dart' as http;
 
 class LocationSelectionPage extends StatefulWidget {
   final int? editIndex;
+  final String googleMapsApiKey; // Added to pass API key
 
   const LocationSelectionPage({
     Key? key,
     this.editIndex,
+    required this.googleMapsApiKey,
   }) : super(key: key);
 
   @override
@@ -24,10 +28,10 @@ class LocationSelectionPage extends StatefulWidget {
 }
 
 class _LocationSelectionPageState extends State<LocationSelectionPage> {
-  final MapController _mapController = MapController();
+  GoogleMapController? _mapController;
   final TextEditingController _searchController = TextEditingController();
-  lat_lng.LatLng? _selectedLocation;
-  lat_lng.LatLng? _currentLocation;
+  LatLng? _selectedLocation;
+  LatLng? _currentLocation;
   List<LocationSearchResult> _searchResults = [];
   bool _isSearching = false;
   String? _selectedLocationName; // Tracks the selected location name
@@ -45,7 +49,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     if (widget.editIndex != null && widget.editIndex! < state.locations.length) {
       final loc = state.locations[widget.editIndex!];
       if (loc != null) {
-        _selectedLocation = lat_lng.LatLng(loc.lat, loc.lng);
+        _selectedLocation = LatLng(loc.lat, loc.lng);
         _selectedLocationName = loc.name ?? loc.address;
         _selectedLocationAddress = loc.address;
       }
@@ -58,20 +62,20 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
         desiredAccuracy: LocationAccuracy.high,
       );
       setState(() {
-        _currentLocation = lat_lng.LatLng(position.latitude, position.longitude);
+        _currentLocation = LatLng(position.latitude, position.longitude);
       });
 
       // Move map to current location if no selected location
-      if (_selectedLocation == null) {
-        _mapController.move(_currentLocation!, 15.0);
+      if (_selectedLocation == null && _mapController != null) {
+        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation!, 15.0));
       }
     } catch (e) {
-      // Fallback to Islamabad
+      // Fallback to Chicago (assuming US-based app)
       setState(() {
-        _currentLocation = const lat_lng.LatLng(33.6844, 73.0479);
+        _currentLocation = const LatLng(41.8781, -87.6298);
       });
-      if (_selectedLocation == null) {
-        _mapController.move(_currentLocation!, 13.0);
+      if (_selectedLocation == null && _mapController != null) {
+        _mapController!.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation!, 13.0));
       }
     }
   }
@@ -89,68 +93,77 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
       _isSearching = true;
     });
 
-    // Mock search results for demonstration
     _performSearch(query);
   }
 
-  void _performSearch(String query) {
-    // Mock search results based on the query
-    List<LocationSearchResult> results = [];
-
-    if (query.toLowerCase().contains('heath')) {
-      results.addAll([
-        LocationSearchResult(
-          name: 'Heathrow Airport Hounslow, UK',
-          address: 'Longford TW6, UK',
-          location: const lat_lng.LatLng(51.4700, -0.4543),
-        ),
-        LocationSearchResult(
-          name: 'Heathrow Terminal 2 Short Stay Car Park',
-          address: 'Hounslow TW6 1EW, UK',
-          location: const lat_lng.LatLng(51.4697, -0.4520),
-        ),
-        LocationSearchResult(
-          name: 'Heathrow Long Stay Terminal 5 North Car Park',
-          address: 'Hounslow TW6, UK',
-          location: const lat_lng.LatLng(51.4720, -0.4890),
-        ),
-      ]);
-    } else if (query.toLowerCase().contains('islamabad')) {
-      results.addAll([
-        LocationSearchResult(
-          name: 'Islamabad International Airport',
-          address: 'Islamabad, Pakistan',
-          location: const lat_lng.LatLng(33.5651, 72.8614),
-        ),
-        LocationSearchResult(
-          name: 'Blue Area Islamabad',
-          address: 'Blue Area, Islamabad, Pakistan',
-          location: const lat_lng.LatLng(33.7077, 73.0563),
-        ),
-        LocationSearchResult(
-          name: 'F-6 Markaz Islamabad',
-          address: 'F-6, Islamabad, Pakistan',
-          location: const lat_lng.LatLng(33.6973, 73.0515),
-        ),
-      ]);
-    } else {
-      // Generic results
-      results.addAll([
-        LocationSearchResult(
-          name: '$query Location',
-          address: 'Near $query, Pakistan',
-          location: lat_lng.LatLng(
-            33.6844 + (query.length * 0.001),
-            73.0479 + (query.length * 0.001),
-          ),
-        ),
-      ]);
+  Future<void> _performSearch(String query) async {
+    if (_currentLocation == null) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
     }
 
-    setState(() {
-      _searchResults = results;
-      _isSearching = false;
-    });
+    try {
+      final encodedQuery = Uri.encodeQueryComponent(query);
+      final locBias = '${_currentLocation!.latitude},${_currentLocation!.longitude}';
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/textsearch/json?query=$encodedQuery&location=$locBias&radius=50000&region=US&key=${widget.googleMapsApiKey}',
+      );
+
+      final response = await http.get(url);
+      if (response.statusCode != 200) {
+        print('Places API HTTP error: ${response.statusCode}');
+        setState(() {
+          _searchResults = [];
+          _isSearching = false;
+        });
+        return;
+      }
+
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final status = data['status'] as String? ?? 'NO_STATUS';
+      if (status != 'OK') {
+        print('Places API status: $status');
+        setState(() {
+          _searchResults = [];
+          _isSearching = false;
+        });
+        return;
+      }
+
+      final results = (data['results'] as List<dynamic>?) ?? [];
+      final searchResults = <LocationSearchResult>[];
+
+      for (final result in results.take(4)) { // Limit to 4
+        final resultMap = result as Map<String, dynamic>;
+        final name = resultMap['name'] as String? ?? query;
+        final address = resultMap['formatted_address'] as String? ?? '';
+        final geometry = resultMap['geometry'] as Map<String, dynamic>?;
+        final location = geometry?['location'] as Map<String, dynamic>?;
+        final lat = location?['lat'] as double?;
+        final lng = location?['lng'] as double?;
+        if (lat != null && lng != null) {
+          searchResults.add(LocationSearchResult(
+            name: name,
+            address: address,
+            location: LatLng(lat, lng),
+          ));
+        }
+      }
+
+      setState(() {
+        _searchResults = searchResults;
+        _isSearching = false;
+      });
+    } catch (e) {
+      print('Places search error: $e');
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+    }
   }
 
   void _onLocationSelected(LocationSearchResult result) {
@@ -161,17 +174,26 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
       _searchController.clear();
       _searchResults = [];
     });
-    _mapController.move(result.location, 16.0);
+    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(result.location, 16.0));
   }
 
-  Future<String> _reverseGeocode(lat_lng.LatLng location) async {
-    // Placeholder for reverse geocoding
-    // In a real app, use a service like Nominatim or Google Geocoding API
-    // For now, return a mock name based on coordinates
+  Future<String> _reverseGeocode(LatLng location) async {
+    try {
+      await setLocaleIdentifier('en_US');
+      List<Placemark> placemarks = await placemarkFromCoordinates(location.latitude, location.longitude);
+      if (placemarks.isNotEmpty) {
+        Placemark pm = placemarks[0];
+        return [pm.name, pm.street, pm.subLocality, pm.locality, pm.country]
+            .where((e) => e != null && e.isNotEmpty)
+            .join(', ');
+      }
+    } catch (e) {
+      // Handle error if needed
+    }
     return 'Custom Location (${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)})';
   }
 
-  void _onMapTapped(lat_lng.LatLng location) async {
+  void _onMapTapped(LatLng location) async {
     // Simulate reverse geocoding for map-tapped location
     final name = await _reverseGeocode(location);
     setState(() {
@@ -221,78 +243,39 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
       body: Stack(
         children: [
           // Fullscreen Map Background
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _selectedLocation ??
-                  _currentLocation ??
-                  const lat_lng.LatLng(33.6844, 73.0479),
-              initialZoom: _selectedLocation != null ? 16.0 : 13.0,
-              onTap: (tapPosition, point) => _onMapTapped(point),
+          GoogleMap(
+            onMapCreated: (GoogleMapController controller) {
+              _mapController = controller;
+              // Move to initial position after creation
+              if (_selectedLocation == null && _currentLocation != null) {
+                _mapController!.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation!, 15.0));
+              }
+            },
+            initialCameraPosition: CameraPosition(
+              target: _selectedLocation ?? _currentLocation ?? const LatLng(41.8781, -87.6298),
+              zoom: _selectedLocation != null ? 16.0 : 13.0,
             ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                subdomains: const ['a', 'b', 'c'],
-              ),
-              MarkerLayer(
-                markers: [
-                  // Current location marker
-                  if (_currentLocation != null)
-                    Marker(
-                      point: _currentLocation!,
-                      child: Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: Colors.blue,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.white,
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  // Selected location marker
-                  if (_selectedLocation != null)
-                    Marker(
-                      point: _selectedLocation!,
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.white,
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.location_pin,
-                          color: AppColors.white,
-                          size: 28,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
+            onTap: _onMapTapped,
+            markers: {
+              // Current location marker
+              if (_currentLocation != null)
+                Marker(
+                  markerId: const MarkerId('current'),
+                  position: _currentLocation!,
+                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+                ),
+              // Selected location marker
+              if (_selectedLocation != null)
+                Marker(
+                  markerId: const MarkerId('selected'),
+                  position: _selectedLocation!,
+                ),
+            },
+            myLocationEnabled: true, // Optional: Show built-in current location button
+            myLocationButtonEnabled: true,
+            gestureRecognizers: {
+              Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
+            },
           ),
 
           // Header overlay with pink background
@@ -542,6 +525,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 }
@@ -549,7 +533,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
 class LocationSearchResult {
   final String name;
   final String address;
-  final lat_lng.LatLng location;
+  final LatLng location;
 
   LocationSearchResult({
     required this.name,

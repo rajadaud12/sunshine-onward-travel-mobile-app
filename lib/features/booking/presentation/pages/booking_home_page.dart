@@ -1,7 +1,11 @@
+// booking_home_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sot/core/config/app_colors.dart';
+import 'package:sot/core/routes/app_routes.dart';
 import 'package:sot/features/booking/presentation/widgets/booking_bottom_sheet.dart';
 import 'package:sot/features/booking/presentation/widgets/booking_location_summary.dart';
 import 'package:sot/features/booking/presentation/widgets/booking_map_view.dart';
@@ -32,14 +36,68 @@ class _BookingHomePageState extends State<BookingHomePage> {
     );
   }
 
+  Future<void> _performSignOut(BuildContext ctx) async {
+    final messenger = ScaffoldMessenger.of(ctx);
+    try {
+      // Sign out from Firebase
+      await FirebaseAuth.instance.signOut();
+
+      // If you use Google sign-in, also sign out Google
+      try {
+        await GoogleSignIn().signOut();
+      } catch (_) {
+        // ignore if GoogleSignIn isn't configured
+      }
+
+      // Navigate to login and remove all previous routes
+      Navigator.pushNamedAndRemoveUntil(ctx, AppRoutes.welcome, (route) => false);
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Error signing out: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _confirmAndSignOut(BuildContext ctx) async {
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dctx) {
+        return AlertDialog(
+          title: const Text('Sign out'),
+          content: const Text('Are you sure you want to sign out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dctx).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _performSignOut(ctx);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<BookingCubit, BookingState>(
       builder: (context, state) {
+        final hasBottomSheet = state.currentStep != null;
+        final bottomOffset = hasBottomSheet ? 140.0 : 24.0;
+        final showRouteInfo = state.locations.length >= 2 &&
+            state.locations.every((loc) => loc != null) &&
+            state.distanceMiles != null &&
+            state.estimatedTime != null;
+
         return Scaffold(
           key: _scaffoldKey,
           drawer: Drawer(
-            // remove elevation (no dropshadow) and ensure no border radius
             elevation: 0,
             shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.zero,
@@ -48,11 +106,10 @@ class _BookingHomePageState extends State<BookingHomePage> {
             child: SafeArea(
               child: Column(
                 children: [
-                  // Custom header container (no bottom border/line)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                    color: AppColors.white, // same as drawer background to avoid any line effect
+                    color: AppColors.white,
                     child: Row(
                       children: [
                         Container(
@@ -112,12 +169,10 @@ class _BookingHomePageState extends State<BookingHomePage> {
                     ),
                   ),
 
-                  // Menu items
                   Expanded(
                     child: ListView(
                       padding: EdgeInsets.zero,
                       children: [
-                        // Use subtle spacing and consistent dividers to keep it elegant
                         ListTile(
                           leading: const Icon(Icons.book, color: AppColors.primary),
                           title: const Text(
@@ -128,11 +183,12 @@ class _BookingHomePageState extends State<BookingHomePage> {
                           ),
                           onTap: () {
                             Navigator.pop(context);
+                            Navigator.pushNamed(context, AppRoutes.bookings);
                           },
                         ),
                         const Divider(color: AppColors.border, height: 1),
                         ListTile(
-                          leading: const Icon(Icons.chat, color: AppColors.primary),
+                          leading: const Icon(Icons.textsms_sharp, color: AppColors.primary),
                           title: const Text(
                             'Chat',
                             style: TextStyle(
@@ -195,6 +251,21 @@ class _BookingHomePageState extends State<BookingHomePage> {
                             Navigator.pop(context);
                           },
                         ),
+                        const Divider(color: AppColors.border, height: 1),
+                        // === Logout item in Drawer ===
+                        ListTile(
+                          leading: const Icon(Icons.logout, color: AppColors.primary),
+                          title: const Text(
+                            'Logout',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context); // close drawer
+                            _confirmAndSignOut(context);
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -205,7 +276,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
           body: Stack(
             children: [
               const BookingMapView(),
-              // Top buttons positioned over the map
               Positioned(
                 top: MediaQuery.of(context).padding.top + 20,
                 left: 20,
@@ -213,7 +283,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Sidebar menu button - fully circular
                     Container(
                       width: 44,
                       height: 44,
@@ -239,7 +308,34 @@ class _BookingHomePageState extends State<BookingHomePage> {
                         ),
                       ),
                     ),
-                    // Profile picture
+                    if (showRouteInfo)
+                      Expanded(
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.border),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              '${state.distanceMiles!.toStringAsFixed(1)} mi • ${state.estimatedTime!.inMinutes} min',
+                              style: const TextStyle(
+                                color: AppColors.black,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     Container(
                       width: 44,
                       height: 44,
@@ -285,11 +381,14 @@ class _BookingHomePageState extends State<BookingHomePage> {
                   right: 20,
                   child: BookingLocationSummary(state: state),
                 ),
+              // Bottom sheet (existing)
               if (state.currentStep != null)
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: BookingBottomSheet(state: state),
                 ),
+
+
             ],
           ),
         );

@@ -13,6 +13,9 @@ class AppRoutes {
   static const String bookingsList = '/bookings-list';
   static const String profile = '/profile';
   static const String welcome = '/welcome';
+  static const String bookings = '/bookings';
+  static const String forgotPassword = '/forgotPassword';
+
 
 // Add more as features expand
 }

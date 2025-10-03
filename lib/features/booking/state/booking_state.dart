@@ -1,5 +1,6 @@
 // booking_state.dart
 import 'package:equatable/equatable.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 enum BookingStep {
   location,
@@ -66,6 +67,9 @@ class BookingState extends Equatable {
   final bool isLoading;
   final String? error;
   final String? selectedPaymentMethod;
+  final List<LatLng>? routePoints;
+  final double? distanceMiles;
+  final Duration? estimatedTime;
 
   const BookingState({
     this.currentStep,
@@ -75,6 +79,9 @@ class BookingState extends Equatable {
     this.isLoading = false,
     this.error,
     this.selectedPaymentMethod,
+    this.routePoints,
+    this.distanceMiles,
+    this.estimatedTime,
   });
 
   @override
@@ -86,6 +93,9 @@ class BookingState extends Equatable {
     isLoading,
     error,
     selectedPaymentMethod,
+    routePoints,
+    distanceMiles,
+    estimatedTime,
   ];
 
   BookingState copyWith({
@@ -96,6 +106,9 @@ class BookingState extends Equatable {
     bool? isLoading,
     String? error,
     String? selectedPaymentMethod,
+    List<LatLng>? routePoints,
+    double? distanceMiles,
+    Duration? estimatedTime,
   }) {
     return BookingState(
       currentStep: currentStep ?? this.currentStep,
@@ -105,6 +118,9 @@ class BookingState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       selectedPaymentMethod: selectedPaymentMethod ?? this.selectedPaymentMethod,
+      routePoints: routePoints ?? this.routePoints,
+      distanceMiles: distanceMiles ?? this.distanceMiles,
+      estimatedTime: estimatedTime ?? this.estimatedTime,
     );
   }
 

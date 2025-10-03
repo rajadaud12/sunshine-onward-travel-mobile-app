@@ -104,7 +104,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(right: 20), // Shift text slightly right
+                          padding: const EdgeInsets.only(right: 50), // Shift text slightly right
                           child: Text(
                             'Booking Summary',
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
