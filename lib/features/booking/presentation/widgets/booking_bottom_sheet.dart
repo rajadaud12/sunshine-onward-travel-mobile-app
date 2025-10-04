@@ -6,15 +6,12 @@ import 'package:sot/core/routes/app_routes.dart';
 import 'package:sot/features/booking/presentation/pages/location_selection_page.dart';
 import 'package:sot/features/booking/state/booking_cubit.dart';
 import 'package:sot/features/booking/state/booking_state.dart';
-
 class BookingBottomSheet extends StatelessWidget {
   final BookingState state;
-
   const BookingBottomSheet({
     Key? key,
     required this.state,
   }) : super(key: key);
-
   void _openLocationSelection(BuildContext context, int? editIndex) {
     showModalBottomSheet(
       context: context,
@@ -25,18 +22,16 @@ class BookingBottomSheet extends StatelessWidget {
         minChildSize: 1.0,
         maxChildSize: 1.0,
         expand: false,
-        builder: (context, scrollController) => LocationSelectionPage(editIndex: editIndex, googleMapsApiKey: 'AIzaSyCPhfNzOVaHkHU7ewiwJGUvf8CxtYD3Mz8',),
+        builder: (context, scrollController) => LocationSelectionPage(editIndex: null, googleMapsApiKey: 'AIzaSyCPhfNzOVaHkHU7ewiwJGUvf8CxtYD3Mz8',),
       ),
     );
   }
-
   Widget _buildLocationContent(BuildContext context) {
     const double fieldHeight = 45;
     const double spacing = 16;
     const double outerIconSize = 28;
     const double innerWhiteSize = 12;
     const double locationIconSize = 28;
-
     final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
       fontSize: 18,
       fontWeight: FontWeight.w600,
@@ -47,7 +42,6 @@ class BookingBottomSheet extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: Color(0xFF080A24),
         );
-
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
@@ -67,7 +61,7 @@ class BookingBottomSheet extends StatelessWidget {
                   children: [
                     for (int i = 0; i < state.locations.length; i++) ...[
                       GestureDetector(
-                        onTap: () => _openLocationSelection(context, i),
+                        onTap: () => _openLocationSelection(context, null),
                         child: Container(
                           height: fieldHeight,
                           decoration: BoxDecoration(
@@ -131,13 +125,11 @@ class BookingBottomSheet extends StatelessWidget {
       ),
     );
   }
-
   Widget _buildLocationIcon(int i, bool isSet) {
     final len = state.locations.length;
     Color color = isSet
         ? (i == 0 ? AppColors.success : i == len - 1 ? AppColors.primary : AppColors.waypoint)
         : AppColors.placeholder;
-
     if (i == 0 || (i > 0 && i < len - 1)) {
       return Container(
         width: 28,
@@ -165,7 +157,6 @@ class BookingBottomSheet extends StatelessWidget {
       );
     }
   }
-
   Widget _buildDateTimeContent(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
       fontSize: 18,
@@ -177,9 +168,7 @@ class BookingBottomSheet extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: Color(0xFF080A24),
         );
-
     const double activeLineHeight = 56;
-
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
@@ -279,7 +268,6 @@ class BookingBottomSheet extends StatelessWidget {
       ),
     );
   }
-
   Widget _buildVehicleContent(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
       fontSize: 18,
@@ -291,7 +279,6 @@ class BookingBottomSheet extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: Color(0xFF080A24),
         );
-
     final vehicles = [
       {
         'name': 'Saloon',
@@ -312,7 +299,6 @@ class BookingBottomSheet extends StatelessWidget {
         'image': 'assets/images/car3.png',
       },
     ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -338,10 +324,9 @@ class BookingBottomSheet extends StatelessWidget {
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                // Apply full-width background color here
-                color: isSelected ? AppColors.primary : null, // Full width background
+                color: isSelected ? AppColors.primary : null,
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 12, bottom:12, right: 16), // Move padding here
+                  padding: const EdgeInsets.only(top: 12, bottom:12, right: 16),
                   child: Row(
                     children: [
                       Image.asset(
@@ -400,7 +385,6 @@ class BookingBottomSheet extends StatelessWidget {
       ],
     );
   }
-
   double _getSelectedPrice() {
     switch (state.selectedVehicle) {
       case 'Saloon':
@@ -413,14 +397,12 @@ class BookingBottomSheet extends StatelessWidget {
         return 0.00;
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final isSelectRideStep = state.currentStep == BookingStep.selectRide;
     final canProceed = state.canProceed;
     final selectedPrice = _getSelectedPrice();
     final priceStr = selectedPrice.toStringAsFixed(2).replaceAll('.', ',');
-
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -573,14 +555,12 @@ class BookingBottomSheet extends StatelessWidget {
     );
   }
 }
-
 class _DashLinePainter extends CustomPainter {
   final double dashWidth;
   final double dashHeight;
   final double gap;
   final Color color;
   final double radius;
-
   _DashLinePainter({
     this.dashWidth = 2,
     this.dashHeight = 7,
@@ -588,7 +568,6 @@ class _DashLinePainter extends CustomPainter {
     this.color = AppColors.border,
     this.radius = 3,
   });
-
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = color;
@@ -601,23 +580,18 @@ class _DashLinePainter extends CustomPainter {
       y += dashHeight + gap;
     }
   }
-
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
 class _HourWheel extends StatelessWidget {
   final BookingState state;
-
   const _HourWheel({required this.state, Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     final currentDt = state.departureDate ?? DateTime.now();
     int hour12 = currentDt.hour % 12;
     hour12 = hour12 == 0 ? 12 : hour12;
     final controller = FixedExtentScrollController(initialItem: hour12 - 1 + 12 * 100);
-
     return SizedBox(
       width: 60,
       child: ListWheelScrollView.useDelegate(
@@ -662,18 +636,14 @@ class _HourWheel extends StatelessWidget {
     );
   }
 }
-
 class _MinuteWheel extends StatelessWidget {
   final BookingState state;
-
   const _MinuteWheel({required this.state, Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     final currentDt = state.departureDate ?? DateTime.now();
     final minute = currentDt.minute;
     final controller = FixedExtentScrollController(initialItem: minute + 60 * 100);
-
     return SizedBox(
       width: 60,
       child: ListWheelScrollView.useDelegate(
@@ -711,18 +681,14 @@ class _MinuteWheel extends StatelessWidget {
     );
   }
 }
-
 class _PeriodWheel extends StatelessWidget {
   final BookingState state;
-
   const _PeriodWheel({required this.state, Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     final currentDt = state.departureDate ?? DateTime.now();
     final isAM = currentDt.hour < 12;
     final controller = FixedExtentScrollController(initialItem: (isAM ? 0 : 1) + 2 * 100);
-
     return SizedBox(
       width: 60,
       child: ListWheelScrollView.useDelegate(

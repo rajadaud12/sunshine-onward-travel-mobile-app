@@ -94,7 +94,7 @@ class BookingLocationSummary extends StatelessWidget {
         height: _addPillHeight,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: enabled ? AppColors.card : AppColors.border.withOpacity(0.7),
+          color: enabled ? const Color(0xFFFFEB3B) : AppColors.border.withOpacity(0.7),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.border),
         ),
@@ -105,14 +105,14 @@ class BookingLocationSummary extends StatelessWidget {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: enabled ? AppColors.card : AppColors.border.withOpacity(0.7),
+                color: enabled ? AppColors.white : AppColors.border.withOpacity(0.7),
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: Icon(
                   Icons.add,
                   size: 14,
-                  color: enabled ? AppColors.placeholder : AppColors.placeholder.withOpacity(0.6),
+                  color: enabled ? AppColors.black : AppColors.placeholder.withOpacity(0.6),
                 ),
               ),
             ),
@@ -120,7 +120,7 @@ class BookingLocationSummary extends StatelessWidget {
             Text(
               'Add',
               style: TextStyle(
-                color: const Color(0xFF656565).withOpacity(enabled ? 1.0 : 0.6),
+                color: enabled ? AppColors.black : const Color(0xFF656565).withOpacity(0.6),
                 fontSize: 12,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w400,

@@ -11,17 +11,13 @@ import 'package:sot/features/booking/presentation/widgets/booking_location_summa
 import 'package:sot/features/booking/presentation/widgets/booking_map_view.dart';
 import 'package:sot/features/booking/state/booking_cubit.dart';
 import 'package:sot/features/booking/state/booking_state.dart';
-
 class BookingHomePage extends StatefulWidget {
   const BookingHomePage({super.key});
-
   @override
   State<BookingHomePage> createState() => _BookingHomePageState();
 }
-
 class _BookingHomePageState extends State<BookingHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   @override
   void initState() {
     super.initState();
@@ -35,20 +31,17 @@ class _BookingHomePageState extends State<BookingHomePage> {
       ),
     );
   }
-
   Future<void> _performSignOut(BuildContext ctx) async {
     final messenger = ScaffoldMessenger.of(ctx);
     try {
       // Sign out from Firebase
       await FirebaseAuth.instance.signOut();
-
       // If you use Google sign-in, also sign out Google
       try {
         await GoogleSignIn().signOut();
       } catch (_) {
         // ignore if GoogleSignIn isn't configured
       }
-
       // Navigate to login and remove all previous routes
       Navigator.pushNamedAndRemoveUntil(ctx, AppRoutes.welcome, (route) => false);
     } catch (e) {
@@ -57,7 +50,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
       );
     }
   }
-
   Future<void> _confirmAndSignOut(BuildContext ctx) async {
     final confirmed = await showDialog<bool>(
       context: ctx,
@@ -78,12 +70,10 @@ class _BookingHomePageState extends State<BookingHomePage> {
         );
       },
     );
-
     if (confirmed == true) {
       await _performSignOut(ctx);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<BookingCubit, BookingState>(
@@ -94,7 +84,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
             state.locations.every((loc) => loc != null) &&
             state.distanceMiles != null &&
             state.estimatedTime != null;
-
         return Scaffold(
           key: _scaffoldKey,
           drawer: Drawer(
@@ -168,7 +157,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
                       ],
                     ),
                   ),
-
                   Expanded(
                     child: ListView(
                       padding: EdgeInsets.zero,
@@ -387,8 +375,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
                   alignment: Alignment.bottomCenter,
                   child: BookingBottomSheet(state: state),
                 ),
-
-
             ],
           ),
         );

@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
         title: "Sunshine Onward Travel",
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
+        darkTheme: AppTheme.lightTheme,
         initialRoute: initialRoute,
         onGenerateRoute: AppRouter.generateRoute,
       ),
