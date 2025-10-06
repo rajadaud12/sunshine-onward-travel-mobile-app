@@ -1,5 +1,6 @@
 // location_selection_page.dart
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,38 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   bool _isSearching = false;
   String _lastFocused = 'to';
 
+  static const LatLng heathrow = LatLng(51.4700, -0.4543);
+  static const double fiveMiles = 5.0;
+  static const double thirtyMiles = 30.0;
+
+  static  List<LocationSearchResult> heathrowSuggestions = [
+    LocationSearchResult(
+      name: 'Heathrow Airport',
+      address: 'Hounslow, United Kingdom',
+      location: LatLng(51.4700, -0.4543),
+    ),
+    LocationSearchResult(
+      name: 'Heathrow Terminal 2',
+      address: 'Longford, Hounslow, United Kingdom',
+      location: LatLng(51.4703, -0.4521),
+    ),
+    LocationSearchResult(
+      name: 'Heathrow Terminal 3',
+      address: 'Longford, Hounslow, United Kingdom',
+      location: LatLng(51.4713, -0.4586),
+    ),
+    LocationSearchResult(
+      name: 'Heathrow Terminal 4',
+      address: 'Longford, Hounslow, United Kingdom',
+      location: LatLng(51.4595, -0.4470),
+    ),
+    LocationSearchResult(
+      name: 'Heathrow Terminal 5',
+      address: 'Longford, Hounslow, United Kingdom',
+      location: LatLng(51.4728, -0.4879),
+    ),
+  ];
+
   static const String _darkMapStyle = '[{"elementType":"geometry","stylers":[{"color":"#212121"}]},{"elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},{"elementType":"labels.text.stroke","stylers":[{"color":"#212121"}]},{"featureType":"administrative","elementType":"geometry","stylers":[{"color":"#757575"}]},{"featureType":"administrative.country","elementType":"labels.text.fill","stylers":[{"color":"#9e9e9e"}]},{"featureType":"administrative.land_parcel","stylers":[{"visibility":"off"}]},{"featureType":"administrative.locality","elementType":"labels.text.fill","stylers":[{"color":"#bdbdbd"}]},{"featureType":"poi","elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#181818"}]},{"featureType":"poi.park","elementType":"labels.text.fill","stylers":[{"color":"#616161"}]},{"featureType":"poi.park","elementType":"labels.text.stroke","stylers":[{"color":"#1b1b1b"}]},{"featureType":"road","elementType":"geometry.fill","stylers":[{"color":"#2c2c2c"}]},{"featureType":"road","elementType":"labels.text.fill","stylers":[{"color":"#8a8a8a"}]},{"featureType":"road.arterial","elementType":"geometry","stylers":[{"color":"#373737"}]},{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#3c3c3c"}]},{"featureType":"road.highway.controlled_access","elementType":"geometry","stylers":[{"color":"#4e4e4e"}]},{"featureType":"road.local","elementType":"labels.text.fill","stylers":[{"color":"#616161"}]},{"featureType":"transit","elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},{"featureType":"water","elementType":"geometry","stylers":[{"color":"#000000"}]},{"featureType":"water","elementType":"labels.text.fill","stylers":[{"color":"#3d3d3d"}]}]';
 
   @override
@@ -56,19 +89,40 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     _fromFocusNode.addListener(() {
       if (_fromFocusNode.hasFocus) {
         _lastFocused = 'from';
-        if (_fromController.text.isNotEmpty) _onSearchChanged(_fromController.text);
+        if (_fromController.text.isEmpty) {
+          setState(() {
+            _searchResults = heathrowSuggestions;
+            _isSearching = false;
+          });
+        } else {
+          _onSearchChanged(_fromController.text);
+        }
       }
     });
     _toFocusNode.addListener(() {
       if (_toFocusNode.hasFocus) {
         _lastFocused = 'to';
-        if (_toController.text.isNotEmpty) _onSearchChanged(_toController.text);
+        if (_toController.text.isEmpty) {
+          setState(() {
+            _searchResults = heathrowSuggestions;
+            _isSearching = false;
+          });
+        } else {
+          _onSearchChanged(_toController.text);
+        }
       }
     });
     _searchFocusNode.addListener(() {
       if (_searchFocusNode.hasFocus) {
         _lastFocused = 'single';
-        if (_searchController.text.isNotEmpty) _onSearchChanged(_searchController.text);
+        if (_searchController.text.isEmpty) {
+          setState(() {
+            _searchResults = heathrowSuggestions;
+            _isSearching = false;
+          });
+        } else {
+          _onSearchChanged(_searchController.text);
+        }
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -125,7 +179,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
       }
     } catch (e) {
       setState(() {
-        _currentLocation = const LatLng(41.8781, -87.6298);
+        _currentLocation = heathrow;
       });
       if (_mapController != null) {
         _updateCamera();
@@ -168,7 +222,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   void _onSearchChanged(String query) {
     if (query.isEmpty) {
       setState(() {
-        _searchResults = [];
+        _searchResults = heathrowSuggestions;
         _isSearching = false;
       });
       return;
@@ -191,7 +245,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
       final encodedQuery = Uri.encodeQueryComponent(query);
       final locBias = '${_currentLocation!.latitude},${_currentLocation!.longitude}';
       final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/textsearch/json?query=$encodedQuery&location=$locBias&radius=50000&region=US&key=${widget.googleMapsApiKey}',
+        'https://maps.googleapis.com/maps/api/place/textsearch/json?query=$encodedQuery&location=$locBias&radius=50000&region=GB&key=${widget.googleMapsApiKey}',
       );
       final response = await http.get(url);
       if (response.statusCode != 200) {
@@ -243,7 +297,14 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     }
   }
 
-  void _onLocationSelected(LocationSearchResult result) {
+  Future<void> _onLocationSelected(LocationSearchResult result) async {
+    final (name, country) = await _reverseGeocode(result.location);
+    if (country != 'United Kingdom') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a location within the UK')),
+      );
+      return;
+    }
     setState(() {
       if (widget.editIndex != null) {
         _selectedLocation = result.location;
@@ -271,23 +332,31 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     _updateCamera();
   }
 
-  Future<String> _reverseGeocode(LatLng location) async {
+  Future<(String, String?)> _reverseGeocode(LatLng location) async {
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(location.latitude, location.longitude);
       if (placemarks.isNotEmpty) {
         Placemark pm = placemarks[0];
-        return [pm.name, pm.street, pm.subLocality, pm.locality, pm.country]
+        String address = [pm.name, pm.street, pm.subLocality, pm.locality, pm.country]
             .where((e) => e != null && e.isNotEmpty)
             .join(', ');
+        String? country = pm.country;
+        return (address, country);
       }
     } catch (e) {
       // Handle error if needed
     }
-    return 'Custom Location (${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)})';
+    return ('Custom Location (${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)})', null);
   }
 
   void _onMapTapped(LatLng location) async {
-    final name = await _reverseGeocode(location);
+    final (name, country) = await _reverseGeocode(location);
+    if (country != null && country != 'United Kingdom') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a location within the UK')),
+      );
+      return;
+    }
     setState(() {
       if (widget.editIndex != null) {
         _selectedLocation = location;
@@ -331,6 +400,8 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   }
 
   void _confirmSelection() {
+    final cubit = context.read<BookingCubit>();
+    var currentState = cubit.state;
     if (widget.editIndex != null) {
       if (_selectedLocation == null) return;
       final bookingLocation = BookingLocation(
@@ -339,7 +410,40 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
         address: _selectedLocationAddress ?? _selectedLocationName ?? 'Unknown Location',
         name: _selectedLocationName ?? 'Unknown Location',
       );
-      context.read<BookingCubit>().setLocation(widget.editIndex!, bookingLocation);
+      final LatLng newLocLatLng = LatLng(bookingLocation.lat, bookingLocation.lng);
+      final double newDist = _haversineDistanceMiles(newLocLatLng, heathrow);
+      List<BookingLocation?> tempLocations = List.from(currentState.locations);
+      tempLocations[widget.editIndex!] = bookingLocation;
+      if (tempLocations.any((loc) => loc == null)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please set all locations first.')),
+        );
+        return;
+      }
+      List<BookingLocation> proposed = tempLocations.cast<BookingLocation>();
+      final pickupLatLng = LatLng(proposed[0].lat, proposed[0].lng);
+      final destLatLng = LatLng(proposed.last.lat, proposed.last.lng);
+      final pickupDist = _haversineDistanceMiles(pickupLatLng, heathrow);
+      final destDist = _haversineDistanceMiles(destLatLng, heathrow);
+      if (pickupDist > fiveMiles && destDist > fiveMiles) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ride must start or end within 5 miles of Heathrow Airport.')),
+        );
+        return;
+      }
+      double totalDist = 0.0;
+      for (int i = 0; i < proposed.length - 1; i++) {
+        final a = LatLng(proposed[i].lat, proposed[i].lng);
+        final b = LatLng(proposed[i + 1].lat, proposed[i + 1].lng);
+        totalDist += _haversineDistanceMiles(a, b);
+      }
+      if (totalDist < thirtyMiles) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Route distance must be at least 30 miles.')),
+        );
+        return;
+      }
+      cubit.setLocation(widget.editIndex!, bookingLocation);
     } else {
       if (_fromLocation == null || _toLocation == null) return;
       final fromLoc = BookingLocation(
@@ -354,12 +458,62 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
         address: _toLocationAddress ?? _toLocationName ?? 'Unknown Location',
         name: _toLocationName ?? 'Unknown Location',
       );
-      final cubit = context.read<BookingCubit>();
+      if (currentState.locations.isEmpty) {
+        cubit.setStep(BookingStep.location);
+        currentState = cubit.state;
+      }
+      List<BookingLocation?> tempLocations = List.from(currentState.locations);
+      tempLocations[0] = fromLoc;
+      tempLocations[tempLocations.length - 1] = toLoc;
+      if (tempLocations.any((loc) => loc == null)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please set all locations first.')),
+        );
+        return;
+      }
+      List<BookingLocation> proposed = tempLocations.cast<BookingLocation>();
+      final pickupLatLng = LatLng(proposed[0].lat, proposed[0].lng);
+      final destLatLng = LatLng(proposed.last.lat, proposed.last.lng);
+      final pickupDist = _haversineDistanceMiles(pickupLatLng, heathrow);
+      final destDist = _haversineDistanceMiles(destLatLng, heathrow);
+      if (pickupDist > fiveMiles && destDist > fiveMiles) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ride must start or end within 5 miles of Heathrow Airport.')),
+        );
+        return;
+      }
+      double totalDist = 0.0;
+      for (int i = 0; i < proposed.length - 1; i++) {
+        final a = LatLng(proposed[i].lat, proposed[i].lng);
+        final b = LatLng(proposed[i + 1].lat, proposed[i + 1].lng);
+        totalDist += _haversineDistanceMiles(a, b);
+      }
+      if (totalDist < thirtyMiles) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Route distance must be at least 30 miles.')),
+        );
+        return;
+      }
       cubit.setLocation(0, fromLoc);
       cubit.setLocation(cubit.state.locations.length - 1, toLoc);
     }
     Navigator.of(context).pop();
   }
+
+  double _haversineDistanceMiles(LatLng a, LatLng b) {
+    const double earthRadiusMiles = 3958.8;
+    final double dLat = _degToRad(b.latitude - a.latitude);
+    final double dLng = _degToRad(b.longitude - a.longitude);
+    final double lat1 = _degToRad(a.latitude);
+    final double lat2 = _degToRad(b.latitude);
+    final double sinDLat = math.sin(dLat / 2);
+    final double sinDLng = math.sin(dLng / 2);
+    final double aa = sinDLat * sinDLat + math.cos(lat1) * math.cos(lat2) * sinDLng * sinDLng;
+    final double c = 2 * math.atan2(math.sqrt(aa), math.sqrt(1 - aa));
+    return earthRadiusMiles * c;
+  }
+
+  double _degToRad(double deg) => deg * (math.pi / 180.0);
 
   String get _title {
     if (widget.editIndex == null) {
@@ -395,7 +549,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
               }
             },
             initialCameraPosition: CameraPosition(
-              target: _currentLocation ?? const LatLng(41.8781, -87.6298),
+              target: _currentLocation ?? heathrow,
               zoom: 13.0,
             ),
             onTap: _onMapTapped,
@@ -515,6 +669,8 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                                     focusNode: _fromFocusNode,
                                     onChanged: _onSearchChanged,
                                     decoration: InputDecoration(
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
                                       border: InputBorder.none,
                                       hintText: 'Choose pick up point',
                                       hintStyle: TextStyle(color: AppColors.placeholder, fontSize: 14, height: 1.0),
@@ -548,6 +704,10 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                                     onChanged: _onSearchChanged,
                                     decoration: InputDecoration(
                                       border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+
+
                                       hintText: 'Choose your destination',
                                       hintStyle: TextStyle(color: AppColors.placeholder, fontSize: 14, height: 1.0),
                                       hintMaxLines: 1,
@@ -583,14 +743,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                               ),
                             ),
                           ),
-                          Positioned(
-                            right: 16,
-                            top: 50 / 2 - 12,
-                            child: IconButton(
-                              icon: const Icon(Icons.swap_vert, color: AppColors.placeholder),
-                              onPressed: _swapFromTo,
-                            ),
-                          ),
+
                         ],
                       ),
                     ),
@@ -618,6 +771,9 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                                 onChanged: _onSearchChanged,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+
                                   hintText: 'Search location...',
                                   hintStyle: TextStyle(color: AppColors.placeholder, fontSize: 14, height: 1.0),
                                   hintMaxLines: 1,
@@ -768,7 +924,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                 child: Container(
                   height: 52,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFEB3B),
+                    color:  AppColors.primary,
                     borderRadius: BorderRadius.circular(26),
                     boxShadow: [
                       BoxShadow(
@@ -782,7 +938,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                     child: Text(
                       'Done',
                       style: TextStyle(
-                        color: AppColors.black,
+                        color: AppColors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,
@@ -867,3 +1023,4 @@ class _DashLinePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

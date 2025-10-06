@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:sot/core/config/app_colors.dart';
 import 'package:sot/features/booking/state/booking_cubit.dart';
 import 'package:sot/features/booking/state/booking_state.dart';
 class BookingMapView extends StatefulWidget {
@@ -60,7 +61,7 @@ class _BookingMapViewState extends State<BookingMapView> {
             _updateMap(state);
           },
           initialCameraPosition: CameraPosition(
-            target: locationPoints.isNotEmpty ? locationPoints.first : const LatLng(41.8781, -87.6298),
+            target: locationPoints.isNotEmpty ? locationPoints.first : const LatLng(51.4700, -0.4543),
             zoom: 13.0,
           ),
           markers: markers,
@@ -93,4 +94,19 @@ class _BookingMapViewState extends State<BookingMapView> {
     );
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
   }
+}
+
+class _DashLinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = AppColors.border;
+    double y = 0;
+    while (y < size.height) {
+      canvas.drawLine(Offset(0, y), Offset(0, y + 7), paint);
+      y += 7 + 6;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

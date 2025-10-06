@@ -11,13 +11,17 @@ import 'package:sot/features/booking/presentation/widgets/booking_location_summa
 import 'package:sot/features/booking/presentation/widgets/booking_map_view.dart';
 import 'package:sot/features/booking/state/booking_cubit.dart';
 import 'package:sot/features/booking/state/booking_state.dart';
+
 class BookingHomePage extends StatefulWidget {
   const BookingHomePage({super.key});
+
   @override
   State<BookingHomePage> createState() => _BookingHomePageState();
 }
+
 class _BookingHomePageState extends State<BookingHomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +35,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
       ),
     );
   }
+
   Future<void> _performSignOut(BuildContext ctx) async {
     final messenger = ScaffoldMessenger.of(ctx);
     try {
@@ -50,6 +55,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
       );
     }
   }
+
   Future<void> _confirmAndSignOut(BuildContext ctx) async {
     final confirmed = await showDialog<bool>(
       context: ctx,
@@ -74,9 +80,18 @@ class _BookingHomePageState extends State<BookingHomePage> {
       await _performSignOut(ctx);
     }
   }
+
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<BookingCubit, BookingState>(
+    return BlocConsumer<BookingCubit, BookingState>(
+      listener: (context, state) {
+        if (state.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.error!)),
+          );
+          context.read<BookingCubit>().clearError();
+        }
+      },
       builder: (context, state) {
         final hasBottomSheet = state.currentStep != null;
         final bottomOffset = hasBottomSheet ? 140.0 : 24.0;
@@ -84,6 +99,24 @@ class _BookingHomePageState extends State<BookingHomePage> {
             state.locations.every((loc) => loc != null) &&
             state.distanceMiles != null &&
             state.estimatedTime != null;
+        final allLocationsSet = state.locations.isNotEmpty && state.locations.every((loc) => loc != null);
+
+        double initialChildSize = 0.5;
+        switch (state.currentStep) {
+          case BookingStep.location:
+            final len = state.locations.length;
+            initialChildSize = 0.35 + 0.05 * (len - 2).clamp(0, 3);
+            break;
+          case BookingStep.dateTime:
+            initialChildSize = 0.55;
+            break;
+          case BookingStep.selectRide:
+            initialChildSize = 0.50;
+            break;
+          default:
+            initialChildSize = 0.5;
+        }
+
         return Scaffold(
           key: _scaffoldKey,
           drawer: Drawer(
@@ -264,105 +297,106 @@ class _BookingHomePageState extends State<BookingHomePage> {
           body: Stack(
             children: [
               const BookingMapView(),
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 20,
-                left: 20,
-                right: 20,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: IconButton(
-                        onPressed: () {
-                          _scaffoldKey.currentState!.openDrawer();
-                        },
-                        icon: const Icon(
-                          Icons.menu,
-                          color: AppColors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                    if (showRouteInfo)
-                      Expanded(
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppColors.border),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+              if (state.currentStep == BookingStep.location || state.currentStep == BookingStep.dateTime)
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 20,
+                  left: 20,
+                  right: 20,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
-                            child: Text(
-                              '${state.distanceMiles!.toStringAsFixed(1)} mi • ${state.estimatedTime!.inMinutes} min',
-                              style: const TextStyle(
-                                color: AppColors.black,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
+                          ],
                         ),
-                      ),
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.white,
-                          width: 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(22),
-                        child: Image.network(
-                          'https://via.placeholder.com/44x44/CCCCCC/FFFFFF?text=U',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: AppColors.white,
-                              child: const Icon(
-                                Icons.person,
-                                color: AppColors.placeholder,
-                                size: 24,
-                              ),
-                            );
+                        child: IconButton(
+                          onPressed: () {
+                            _scaffoldKey.currentState!.openDrawer();
                           },
+                          icon: const Icon(
+                            Icons.menu,
+                            color: AppColors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      if (showRouteInfo)
+                        Expanded(
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: AppColors.border),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '${state.distanceMiles!.toStringAsFixed(1)} mi • ${state.estimatedTime!.inMinutes} min',
+                                style: const TextStyle(
+                                  color: AppColors.black,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.white,
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: Image.network(
+                            'https://via.placeholder.com/44x44/CCCCCC/FFFFFF?text=U',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: AppColors.white,
+                                child: const Icon(
+                                  Icons.person,
+                                  color: AppColors.placeholder,
+                                  size: 24,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              if ((state.currentStep == BookingStep.dateTime) || (state.currentStep == BookingStep.selectRide))
+              if ((state.currentStep == BookingStep.location || state.currentStep == BookingStep.dateTime) && allLocationsSet)
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 80,
                   left: 20,
@@ -371,9 +405,14 @@ class _BookingHomePageState extends State<BookingHomePage> {
                 ),
               // Bottom sheet (existing)
               if (state.currentStep != null)
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: BookingBottomSheet(state: state),
+                DraggableScrollableSheet(
+                  key: ValueKey(state.currentStep),
+                  initialChildSize: initialChildSize,
+                  minChildSize: 0.25,
+                  maxChildSize: initialChildSize,
+                  builder: (BuildContext context, ScrollController scrollController) {
+                    return BookingBottomSheet(state: state, scrollController: scrollController);
+                  },
                 ),
             ],
           ),

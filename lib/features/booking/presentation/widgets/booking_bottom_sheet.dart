@@ -6,12 +6,16 @@ import 'package:sot/core/routes/app_routes.dart';
 import 'package:sot/features/booking/presentation/pages/location_selection_page.dart';
 import 'package:sot/features/booking/state/booking_cubit.dart';
 import 'package:sot/features/booking/state/booking_state.dart';
+
 class BookingBottomSheet extends StatelessWidget {
   final BookingState state;
+  final ScrollController? scrollController;
   const BookingBottomSheet({
     Key? key,
     required this.state,
+    this.scrollController,
   }) : super(key: key);
+
   void _openLocationSelection(BuildContext context, int? editIndex) {
     showModalBottomSheet(
       context: context,
@@ -22,10 +26,11 @@ class BookingBottomSheet extends StatelessWidget {
         minChildSize: 1.0,
         maxChildSize: 1.0,
         expand: false,
-        builder: (context, scrollController) => LocationSelectionPage(editIndex: null, googleMapsApiKey: 'AIzaSyCPhfNzOVaHkHU7ewiwJGUvf8CxtYD3Mz8',),
+        builder: (context, scrollController) => LocationSelectionPage(editIndex: editIndex, googleMapsApiKey: 'AIzaSyCPhfNzOVaHkHU7ewiwJGUvf8CxtYD3Mz8',),
       ),
     );
   }
+
   Widget _buildLocationContent(BuildContext context) {
     const double fieldHeight = 45;
     const double spacing = 16;
@@ -42,6 +47,7 @@ class BookingBottomSheet extends StatelessWidget {
           fontWeight: FontWeight.w600,
           color: Color(0xFF080A24),
         );
+    final len = state.locations.length;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       child: Column(
@@ -61,7 +67,10 @@ class BookingBottomSheet extends StatelessWidget {
                   children: [
                     for (int i = 0; i < state.locations.length; i++) ...[
                       GestureDetector(
-                        onTap: () => _openLocationSelection(context, null),
+                        onTap: () {
+                          final editIndex = ((i == 0 || i == len - 1) && len == 2) ? null : i;
+                          _openLocationSelection(context, editIndex);
+                        },
                         child: Container(
                           height: fieldHeight,
                           decoration: BoxDecoration(
@@ -125,6 +134,7 @@ class BookingBottomSheet extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildLocationIcon(int i, bool isSet) {
     final len = state.locations.length;
     Color color = isSet
@@ -157,6 +167,7 @@ class BookingBottomSheet extends StatelessWidget {
       );
     }
   }
+
   Widget _buildDateTimeContent(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
       fontSize: 18,
@@ -268,6 +279,7 @@ class BookingBottomSheet extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildVehicleContent(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.titleLarge?.copyWith(
       fontSize: 18,
@@ -385,6 +397,7 @@ class BookingBottomSheet extends StatelessWidget {
       ],
     );
   }
+
   double _getSelectedPrice() {
     switch (state.selectedVehicle) {
       case 'Saloon':
@@ -397,12 +410,14 @@ class BookingBottomSheet extends StatelessWidget {
         return 0.00;
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final isSelectRideStep = state.currentStep == BookingStep.selectRide;
     final canProceed = state.canProceed;
     final selectedPrice = _getSelectedPrice();
     final priceStr = selectedPrice.toStringAsFixed(2).replaceAll('.', ',');
+    const double bottomBarHeight = 69.0; // Calculated as 12*2 (vertical padding) + 45 (button height)
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -412,112 +427,114 @@ class BookingBottomSheet extends StatelessWidget {
           BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, -8)),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(0, 18, 0, 20),
-            decoration: const BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 48,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (state.currentStep == BookingStep.location) _buildLocationContent(context),
-                if (state.currentStep == BookingStep.dateTime) _buildDateTimeContent(context),
-                if (state.currentStep == BookingStep.selectRide) _buildVehicleContent(context),
-              ],
-            ),
-          ),
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.card,
-              border: Border(top: BorderSide(color: AppColors.border)),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-            child: Row(
-              children: [
-                if (state.currentStep != BookingStep.location)
-                  SizedBox(
-                    width: 140,
-                    child: GestureDetector(
-                      onTap: () => context.read<BookingCubit>().goToPreviousStep(),
-                      child: Container(
-                        height: 45,
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(50),
-                          border: Border.all(color: AppColors.black, width: 1),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.arrow_back, size: 18, color: AppColors.black),
-                            SizedBox(width: 8),
-                            Text(
-                              'Back',
-                              style: TextStyle(
-                                color: AppColors.black,
-                                fontSize: 14,
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                if (state.currentStep != BookingStep.location) const SizedBox(width: 12),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: canProceed
-                        ? () {
-                      if (state.currentStep == BookingStep.selectRide) {
-                        Navigator.pushNamed(context, AppRoutes.bookingSummary);
-                      } else {
-                        context.read<BookingCubit>().proceedToNextStep();
-                      }
-                    }
-                        : null,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
+          SingleChildScrollView(
+            controller: scrollController,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: bottomBarHeight),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag handle section (now part of scrollable content but starts at top)
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(0, 18, 0, 20),
+                    // Removed inner decoration as outer handles the rounding
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          height: 45,
-                          padding: const EdgeInsets.symmetric(horizontal: 44),
+                          width: 48,
+                          height: 4,
                           decoration: BoxDecoration(
-                            color: canProceed ? AppColors.black : AppColors.placeholder,
+                            color: AppColors.border,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (state.currentStep == BookingStep.location) _buildLocationContent(context),
+                        if (state.currentStep == BookingStep.dateTime) _buildDateTimeContent(context),
+                        if (state.currentStep == BookingStep.selectRide) _buildVehicleContent(context),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Fixed bottom bar
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+              child: Row(
+                children: [
+                  if (state.currentStep != BookingStep.location)
+                    SizedBox(
+                      width: 140,
+                      child: GestureDetector(
+                        onTap: () => context.read<BookingCubit>().goToPreviousStep(),
+                        child: Container(
+                          height: 45,
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
                             borderRadius: BorderRadius.circular(50),
+                            border: Border.all(color: AppColors.black, width: 1),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
+                            children: const [
+                              Icon(Icons.arrow_back, size: 18, color: AppColors.black),
+                              SizedBox(width: 8),
                               Text(
-                                isSelectRideStep ? 'Checkout' : 'Next',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                'Back',
+                                style: TextStyle(
+                                  color: AppColors.black,
                                   fontSize: 14,
                                   fontFamily: 'Poppins',
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              if (isSelectRideStep) const SizedBox(width: 24),
-                              if (isSelectRideStep)
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (state.currentStep != BookingStep.location) const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: canProceed
+                          ? () {
+                        if (state.currentStep == BookingStep.selectRide) {
+                          Navigator.pushNamed(context, AppRoutes.bookingSummary);
+                        } else {
+                          context.read<BookingCubit>().proceedToNextStep();
+                        }
+                      }
+                          : null,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            height: 45,
+                            padding: const EdgeInsets.symmetric(horizontal: 44),
+                            decoration: BoxDecoration(
+                              color: canProceed ? AppColors.black : AppColors.placeholder,
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
                                 Text(
-                                  '\$$priceStr',
+                                  isSelectRideStep ? 'Checkout' : 'Next',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 14,
@@ -525,29 +542,41 @@ class BookingBottomSheet extends StatelessWidget {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                            ],
-                          ),
-                        ),
-                        Positioned(
-                          right: 4,
-                          child: Container(
-                            height: 35,
-                            width: 35,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.black, width: 1),
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.chevron_right, size: 22, color: AppColors.black),
+                                if (isSelectRideStep) const SizedBox(width: 24),
+                                if (isSelectRideStep)
+                                  Text(
+                                    '\$$priceStr',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
+                          Positioned(
+                            right: 4,
+                            child: Container(
+                              height: 35,
+                              width: 35,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.black, width: 1),
+                              ),
+                              child: const Center(
+                                child: Icon(Icons.chevron_right, size: 22, color: AppColors.black),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -555,6 +584,7 @@ class BookingBottomSheet extends StatelessWidget {
     );
   }
 }
+
 class _DashLinePainter extends CustomPainter {
   final double dashWidth;
   final double dashHeight;
@@ -568,6 +598,7 @@ class _DashLinePainter extends CustomPainter {
     this.color = AppColors.border,
     this.radius = 3,
   });
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = color;
@@ -580,12 +611,15 @@ class _DashLinePainter extends CustomPainter {
       y += dashHeight + gap;
     }
   }
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
 class _HourWheel extends StatelessWidget {
   final BookingState state;
   const _HourWheel({required this.state, Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     final currentDt = state.departureDate ?? DateTime.now();
@@ -636,9 +670,11 @@ class _HourWheel extends StatelessWidget {
     );
   }
 }
+
 class _MinuteWheel extends StatelessWidget {
   final BookingState state;
   const _MinuteWheel({required this.state, Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     final currentDt = state.departureDate ?? DateTime.now();
@@ -681,9 +717,11 @@ class _MinuteWheel extends StatelessWidget {
     );
   }
 }
+
 class _PeriodWheel extends StatelessWidget {
   final BookingState state;
   const _PeriodWheel({required this.state, Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     final currentDt = state.departureDate ?? DateTime.now();

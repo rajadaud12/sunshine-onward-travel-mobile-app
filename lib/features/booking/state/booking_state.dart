@@ -121,15 +121,19 @@ class BookingState extends Equatable {
   bool get canProceed {
     switch (currentStep) {
       case BookingStep.location:
-        return locations.length >= 2 && locations.every((loc) => loc != null);
+        return locations.length >= 2 &&
+            locations.every((loc) => loc != null) &&
+            error == null &&
+            distanceMiles != null &&
+            estimatedTime != null;
       case BookingStep.dateTime:
-        return departureDate != null;
+        return departureDate != null && error == null;
       case BookingStep.selectRide:
         print('canProceed for selectRide: ${selectedVehicle !=
             null}, selectedVehicle: $selectedVehicle');
-        return selectedVehicle != null;
+        return selectedVehicle != null && error == null;
       case BookingStep.payment:
-        return selectedPaymentMethod != null;
+        return selectedPaymentMethod != null && error == null;
       default:
         return true;
     }

@@ -12,6 +12,12 @@ class BookingCubit extends Cubit<BookingState> {
   BookingCubit({required this.googleMapsApiKey})
       : _polylinePoints = PolylinePoints(apiKey: googleMapsApiKey),
         super(const BookingState());
+
+  static const LatLng heathrow = LatLng(51.4700, -0.4543);
+  static const double fiveMilesMeters = 8046.72;
+  static const double thirtyMilesMeters = 48280.32;
+  static const double thirtyMiles = 30.0;
+
   void setStep(BookingStep step) {
     if (step == BookingStep.location && state.locations.isEmpty) {
       emit(state.copyWith(locations: <BookingLocation?>[null, null], currentStep: step));
@@ -26,10 +32,10 @@ class BookingCubit extends Cubit<BookingState> {
     emit(state.copyWith(locations: newLocations));
     _fetchRoute();
   }
-  void addWaypoint(BookingLocation loc) {
+  void addWaypoint() {
     if (state.locations.length < 2) return;
     final List<BookingLocation?> newLocations = List<BookingLocation?>.from(state.locations);
-    newLocations.insert(newLocations.length - 1, loc);
+    newLocations.insert(newLocations.length - 1, null);
     emit(state.copyWith(locations: newLocations));
     _fetchRoute();
   }
@@ -85,12 +91,113 @@ class BookingCubit extends Cubit<BookingState> {
   }
   void reset() => emit(const BookingState());
   void selectPaymentMethod(String method) => emit(state.copyWith(selectedPaymentMethod: method));
+  void clearError() => emit(state.copyWith(error: null));
+  Future<double?> getRouteDistance(List<BookingLocation> locations) async {
+    if (locations.length < 2) return null;
+    final pickupLatLng = LatLng(locations.first.lat, locations.first.lng);
+    final destLatLng = LatLng(locations.last.lat, locations.last.lng);
+    final double pickupDistMeters = _haversineDistanceMeters(pickupLatLng, heathrow);
+    final double destDistMeters = _haversineDistanceMeters(destLatLng, heathrow);
+    final bool isValid = (pickupDistMeters <= fiveMilesMeters) || (destDistMeters <= fiveMilesMeters);
+    if (!isValid) {
+      return null;
+    }
+    try {
+      final String origin = '${locations.first.lat},${locations.first.lng}';
+      final String destination = '${locations.last.lat},${locations.last.lng}';
+      String? waypointsParam;
+      if (locations.length > 2) {
+        final List<BookingLocation> intermediates = locations.sublist(1, locations.length - 1);
+        waypointsParam = intermediates.map((l) => '${l.lat},${l.lng}').join('|');
+      }
+      final Uri uri = Uri.https('maps.googleapis.com', '/maps/api/directions/json', <String, String>{
+        'origin': origin,
+        'destination': destination,
+        if (waypointsParam != null && waypointsParam.isNotEmpty) 'waypoints': waypointsParam,
+        'mode': 'driving',
+        'key': googleMapsApiKey,
+      });
+      final http.Response response = await http.get(uri);
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body) as Map<String, dynamic>;
+        if ((data['status'] as String?) == 'OK' && (data['routes'] as List).isNotEmpty) {
+          final Map<String, dynamic> route = (data['routes'] as List).first as Map<String, dynamic>;
+          double distanceMeters = 0.0;
+          final List<dynamic>? legs = route['legs'] as List<dynamic>?;
+          if (legs != null) {
+            for (final dynamic legRaw in legs) {
+              final Map<String, dynamic> leg = legRaw as Map<String, dynamic>;
+              final Map<String, dynamic>? dist = leg['distance'] as Map<String, dynamic>?;
+              if (dist != null && dist['value'] != null) {
+                distanceMeters += (dist['value'] as num).toDouble();
+              }
+            }
+          }
+          if (distanceMeters == 0.0) return null;
+          final double distanceMiles = distanceMeters / 1609.34;
+          return distanceMiles;
+        }
+      }
+    } catch (e) {
+      print('Directions API exception: $e');
+    }
+    // legacy per leg
+    double totalMeters = 0.0;
+    for (int i = 0; i < locations.length - 1; i++) {
+      final PointLatLng origin = PointLatLng(locations[i].lat, locations[i].lng);
+      final PointLatLng destination = PointLatLng(locations[i + 1].lat, locations[i + 1].lng);
+      try {
+        final PolylineResult result = await _polylinePoints.getRouteBetweenCoordinates(
+          request: PolylineRequest(
+            origin: origin,
+            destination: destination,
+            mode: TravelMode.driving,
+          ),
+        );
+        if (result.points.isNotEmpty) {
+          final List<LatLng> legPoints = result.points.map((p) => LatLng(p.latitude, p.longitude)).toList();
+          final double legMeters = _haversineDistanceMetersFromPoints(legPoints);
+          totalMeters += legMeters;
+        } else {
+          final double legMeters = _haversineDistanceMeters(LatLng(origin.latitude, origin.longitude),
+              LatLng(destination.latitude, destination.longitude));
+          totalMeters += legMeters;
+        }
+      } catch (e) {
+        print('Error fetching legacy leg $i: $e');
+        return null;
+      }
+    }
+    if (totalMeters == 0.0) return null;
+    final double distanceMiles = totalMeters / 1609.34;
+    return distanceMiles;
+  }
   Future<void> _fetchRoute() async {
-    final List<BookingLocation> locations = state.locations.whereType<BookingLocation>().toList();
-    if (locations.length < 2) {
-      emit(state.copyWith(routePoints: null, distanceMiles: null, estimatedTime: null));
+    if (state.locations.any((loc) => loc == null) || state.locations.length < 2) {
+      emit(state.copyWith(routePoints: null, distanceMiles: null, estimatedTime: null, error: null));
       return;
     }
+    final List<BookingLocation> locations = state.locations.cast<BookingLocation>();
+    final double? distanceMiles = await getRouteDistance(locations);
+    if (distanceMiles == null) {
+      emit(state.copyWith(
+        routePoints: null,
+        distanceMiles: null,
+        estimatedTime: null,
+        error: 'Invalid route.',
+      ));
+      return;
+    }
+    if (distanceMiles < thirtyMiles) {
+      emit(state.copyWith(
+        routePoints: null,
+        distanceMiles: null,
+        estimatedTime: null,
+        error: 'Route distance must be at least 30 miles.',
+      ));
+      return;
+    }
+    // fetch the full route
     try {
       final String origin = '${locations.first.lat},${locations.first.lng}';
       final String destination = '${locations.last.lat},${locations.last.lng}';
@@ -117,31 +224,22 @@ class BookingCubit extends Cubit<BookingState> {
             final String encoded = overviewPolyline['points'] as String;
             routePoints = _decodePolyline(encoded);
           }
-          double distanceMeters = 0.0;
           int durationSeconds = 0;
           final List<dynamic>? legs = route['legs'] as List<dynamic>?;
           if (legs != null) {
             for (final dynamic legRaw in legs) {
               final Map<String, dynamic> leg = legRaw as Map<String, dynamic>;
-              final Map<String, dynamic>? dist = leg['distance'] as Map<String, dynamic>?;
               final Map<String, dynamic>? dur = leg['duration'] as Map<String, dynamic>?;
-              if (dist != null && dist['value'] != null) {
-                distanceMeters += (dist['value'] as num).toDouble();
-              }
               if (dur != null && dur['value'] != null) {
                 durationSeconds += (dur['value'] as num).toInt();
               }
             }
           }
-          if (distanceMeters == 0.0 && routePoints.isNotEmpty) {
-            distanceMeters = _haversineDistanceMetersFromPoints(routePoints);
+          if (durationSeconds == 0 && distanceMiles > 0.0) {
+            durationSeconds = _estimateDurationFromDistance(distanceMiles).inSeconds;
           }
-          if (durationSeconds == 0 && distanceMeters > 0.0) {
-            durationSeconds = _estimateDurationFromDistance(distanceMeters / 1609.34).inSeconds;
-          }
-          final double distanceMiles = distanceMeters / 1609.34;
           final Duration estimated = Duration(seconds: durationSeconds);
-          emit(state.copyWith(routePoints: routePoints, distanceMiles: distanceMiles, estimatedTime: estimated));
+          emit(state.copyWith(routePoints: routePoints, distanceMiles: distanceMiles, estimatedTime: estimated, error: null));
           return;
         } else {
           print('Directions API status: ${data['status']} error_message: ${data['error_message'] ?? 'none'}');
@@ -152,11 +250,8 @@ class BookingCubit extends Cubit<BookingState> {
     } catch (e) {
       print('Directions API exception: $e');
     }
-    await _fetchRouteLegacyPerLeg(locations);
-  }
-  Future<void> _fetchRouteLegacyPerLeg(List<BookingLocation> locations) async {
+    // legacy for points
     final List<LatLng> allPoints = <LatLng>[];
-    double totalMeters = 0.0;
     int totalSeconds = 0;
     for (int i = 0; i < locations.length - 1; i++) {
       final PointLatLng origin = PointLatLng(locations[i].lat, locations[i].lng);
@@ -176,41 +271,19 @@ class BookingCubit extends Cubit<BookingState> {
           } else {
             allPoints.addAll(legPoints);
           }
-          final double legMeters = _haversineDistanceMetersFromPoints(legPoints);
-          totalMeters += legMeters;
-          final int legSeconds = _estimateDurationFromDistance(legMeters / 1609.34).inSeconds;
+          final int legSeconds = _estimateDurationFromDistance(distanceMiles / locations.length).inSeconds;
           totalSeconds += legSeconds;
         } else {
-          final double legMeters = _haversineDistanceMeters(LatLng(origin.latitude, origin.longitude),
-              LatLng(destination.latitude, destination.longitude));
-          totalMeters += legMeters;
-          totalSeconds += _estimateDurationFromDistance(legMeters / 1609.34).inSeconds;
+          final int legSeconds = _estimateDurationFromDistance(distanceMiles / locations.length).inSeconds;
+          totalSeconds += legSeconds;
         }
       } catch (e) {
         print('Error fetching legacy leg $i: $e');
         continue;
       }
     }
-    if (allPoints.isEmpty) {
-      emit(state.copyWith(routePoints: null, distanceMiles: null, estimatedTime: null));
-      return;
-    }
-    final double distanceMiles = totalMeters / 1609.34;
     final Duration estimated = Duration(seconds: totalSeconds > 0 ? totalSeconds : _estimateDurationFromDistance(distanceMiles).inSeconds);
-    emit(state.copyWith(routePoints: allPoints, distanceMiles: distanceMiles, estimatedTime: estimated));
-  }
-  double _haversineDistanceMetersFromPoints(List<LatLng> points) {
-    if (points.length < 2) return 0.0;
-    double meters = 0.0;
-    for (int i = 0; i < points.length - 1; i++) {
-      meters += _haversineDistanceMeters(points[i], points[i + 1]);
-    }
-    return meters;
-  }
-  Duration _estimateDurationFromDistance(double distanceMiles) {
-    const double averageSpeedMph = 25.0;
-    final double hours = distanceMiles / averageSpeedMph;
-    return Duration(seconds: (hours * 3600).round());
+    emit(state.copyWith(routePoints: allPoints, distanceMiles: distanceMiles, estimatedTime: estimated, error: null));
   }
   double _haversineDistanceMeters(LatLng a, LatLng b) {
     const double earthRadius = 6371000;
@@ -256,5 +329,18 @@ class BookingCubit extends Cubit<BookingState> {
       poly.add(LatLng(finalLat, finalLng));
     }
     return poly;
+  }
+  double _haversineDistanceMetersFromPoints(List<LatLng> points) {
+    if (points.length < 2) return 0.0;
+    double meters = 0.0;
+    for (int i = 0; i < points.length - 1; i++) {
+      meters += _haversineDistanceMeters(points[i], points[i + 1]);
+    }
+    return meters;
+  }
+  Duration _estimateDurationFromDistance(double distanceMiles) {
+    const double averageSpeedMph = 25.0;
+    final double hours = distanceMiles / averageSpeedMph;
+    return Duration(seconds: (hours * 3600).round());
   }
 }

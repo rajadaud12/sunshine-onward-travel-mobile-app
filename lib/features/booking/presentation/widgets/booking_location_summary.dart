@@ -30,6 +30,51 @@ class BookingLocationSummary extends StatelessWidget {
     );
   }
 
+  void _showStopsPopup(BuildContext context) {
+    final len = state.locations.length;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Route Details'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: len,
+            separatorBuilder: (_, __) => const Divider(color: AppColors.border, height: 1),
+            itemBuilder: (c, i) => ListTile(
+              leading: _iconForIndex(i, len),
+              title: Text(
+                state.getLocationDisplay(i) ?? 'Unknown Location',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              onTap: () {
+                Navigator.pop(c);
+                _openLocationSelection(context, i);
+              },
+              trailing: (i > 0 && i < len - 1)
+                  ? IconButton(
+                icon: const Icon(Icons.close, color: AppColors.placeholder),
+                onPressed: () {
+                  Navigator.pop(c);
+                  context.read<BookingCubit>().removeLocation(i);
+                },
+              )
+                  : null,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Icons for pickup / waypoint / destination
   Widget _pickupIcon() {
     return Container(
@@ -78,7 +123,6 @@ class BookingLocationSummary extends StatelessWidget {
   }
 
   // fixed sized add pill so we can align its center with divider
-  static const double _cardWidth = 302;
   static const double _rowHeight = 40;
   static const double _addPillWidth = 84;
   static const double _addPillHeight = 36;
@@ -88,13 +132,19 @@ class BookingLocationSummary extends StatelessWidget {
 
   Widget _addPill(BuildContext context, {required bool enabled}) {
     final pill = GestureDetector(
-      onTap: enabled ? () => _openLocationSelection(context, null) : null,
+      onTap: enabled ? () {
+        final cubit = context.read<BookingCubit>();
+        final newLocations = List<BookingLocation?>.from(state.locations);
+        newLocations.insert(newLocations.length - 1, null);
+        cubit.emit(state.copyWith(locations: newLocations));
+        _openLocationSelection(context, newLocations.length - 2);
+      } : null,
       child: Container(
         width: _addPillWidth,
         height: _addPillHeight,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: enabled ? const Color(0xFFFFEB3B) : AppColors.border.withOpacity(0.7),
+          color: enabled ? AppColors.card : AppColors.border.withOpacity(0.7),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.border),
         ),
@@ -105,14 +155,14 @@ class BookingLocationSummary extends StatelessWidget {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: enabled ? AppColors.white : AppColors.border.withOpacity(0.7),
+                color: enabled ? AppColors.border : AppColors.border.withOpacity(0.7),
                 shape: BoxShape.circle,
               ),
               child: Center(
                 child: Icon(
                   Icons.add,
                   size: 14,
-                  color: enabled ? AppColors.black : AppColors.placeholder.withOpacity(0.6),
+                  color: enabled ? AppColors.textSecondary : AppColors.placeholder.withOpacity(0.6),
                 ),
               ),
             ),
@@ -120,7 +170,7 @@ class BookingLocationSummary extends StatelessWidget {
             Text(
               'Add',
               style: TextStyle(
-                color: enabled ? AppColors.black : const Color(0xFF656565).withOpacity(0.6),
+                color: enabled ? AppColors.textSecondary : const Color(0xFF656565).withOpacity(0.6),
                 fontSize: 12,
                 fontFamily: 'Poppins',
                 fontWeight: FontWeight.w400,
@@ -185,99 +235,94 @@ class BookingLocationSummary extends StatelessWidget {
           ),
         ],
       ),
-      child: SizedBox(
-        width: _cardWidth,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // If there are no locations at all, show a placeholder first row to keep layout sane
-                if (len == 0) ...[
-                  SizedBox(
-                    height: _rowHeight,
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 7),
-                        _pickupIcon(),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Add pickup',
-                            style: _rowTextStyle(),
-                            overflow: TextOverflow.ellipsis,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Pickup row
+              GestureDetector(
+                onTap: () {
+                  final editIndex = (len == 2) ? null : 0;
+                  _openLocationSelection(context, editIndex);
+                },
+                child: SizedBox(
+                  height: _rowHeight,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(width: 7),
+                      _pickupIcon(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          state.getLocationDisplay(0),
+                          style: _rowTextStyle(),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      SizedBox(width: trailingReserve),
+                    ],
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(left: 8, right: 16),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.border,
+                ),
+              ),
+              // Destination row
+              SizedBox(
+                height: _rowHeight,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(width: 7),
+                    _destinationIcon(),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          final editIndex = (len == 2) ? null : len - 1;
+                          _openLocationSelection(context, editIndex);
+                        },
+                        child: Text(
+                          state.getLocationDisplay(len - 1),
+                          style: _rowTextStyle(),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    if (waypointCount > 0)
+                      GestureDetector(
+                        onTap: () => _showStopsPopup(context),
+                        child: Text(
+                          ' • $waypointCount stop${waypointCount > 1 ? 's' : ''}',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        SizedBox(width: trailingReserve),
-                      ],
-                    ),
-                  ),
-                ],
-
-                for (int i = 0; i < len; i++) ...[
-                  InkWell(
-                    onTap: () => _openLocationSelection(context, i),
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      height: _rowHeight,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const SizedBox(width: 7),
-                          _iconForIndex(i, len),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              state.getLocationDisplay(i),
-                              style: _rowTextStyle(),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-
-                          // Put row-specific controls (close icon for intermediate waypoints)
-                          if (i > 0 && i < len - 1)
-                            Container(
-                              width: _closeBtnWidth,
-                              alignment: Alignment.centerRight,
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                icon: const Icon(Icons.close, size: 18, color: Color(0xFFAAAAAA)),
-                                onPressed: () => context.read<BookingCubit>().removeLocation(i),
-                              ),
-                            ),
-
-                          // ALWAYS reserve the right area (so nothing moves under the Add pill)
-                          SizedBox(width: trailingReserve - (i > 0 && i < len - 1 ? 0 : 0)),
-                        ],
                       ),
-                    ),
-                  ),
-
-                  // divider between rows, left inset to align under the text (icon area is spared)
-                  if (i < len - 1)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8, right: 8),
-                      child: Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: AppColors.border,
-                      ),
-                    ),
-                ],
-              ],
-            ),
-
-            // Positioned add pill so its center overlaps the divider after the first row
-            if (len >= 1)
-              Positioned(
-                right: 12,
-                top: addPillTop,
-                child: _addPill(context, enabled: canAddWaypoint),
+                    SizedBox(width: trailingReserve),
+                  ],
+                ),
               ),
-          ],
-        ),
+            ],
+          ),
+          // Positioned add pill so its center overlaps the divider after the first row
+          if (len >= 1)
+            Positioned(
+              right: 12,
+              top: addPillTop,
+              child: _addPill(context, enabled: canAddWaypoint),
+            ),
+        ],
       ),
     );
   }
