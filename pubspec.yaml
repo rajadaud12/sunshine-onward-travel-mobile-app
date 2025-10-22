@@ -45,6 +45,8 @@ dependencies:
   geocoding:
   flutter_polyline_points:
   http:
+  flutter_paypal_payment:
+  flutter_stripe:
 
 
   # The following adds the Cupertino Icons font to your application.

@@ -1,4 +1,4 @@
-// booking_state.dart
+// booking_state.dart (no changes needed)
 import 'package:equatable/equatable.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 enum BookingStep {
@@ -62,6 +62,12 @@ class BookingState extends Equatable {
   final List<LatLng>? routePoints;
   final double? distanceMiles;
   final Duration? estimatedTime;
+  final List<Map<String, dynamic>> pricingModels;
+  final List<Map<String, dynamic>> offHours;
+  final Map<String, double> vehiclePrices;
+  final String? email;
+  final String? phone;
+  final String? additionalInfo;
 
   const BookingState({
     this.currentStep,
@@ -74,6 +80,12 @@ class BookingState extends Equatable {
     this.routePoints,
     this.distanceMiles,
     this.estimatedTime,
+    this.pricingModels = const [],
+    this.offHours = const [],
+    this.vehiclePrices = const {},
+    this.email,
+    this.phone,
+    this.additionalInfo,
   });
 
   @override
@@ -89,6 +101,12 @@ class BookingState extends Equatable {
         routePoints,
         distanceMiles,
         estimatedTime,
+        pricingModels,
+        offHours,
+        vehiclePrices,
+        email,
+        phone,
+        additionalInfo,
       ];
 
   BookingState copyWith({
@@ -102,6 +120,12 @@ class BookingState extends Equatable {
     List<LatLng>? routePoints,
     double? distanceMiles,
     Duration? estimatedTime,
+    List<Map<String, dynamic>>? pricingModels,
+    List<Map<String, dynamic>>? offHours,
+    Map<String, double>? vehiclePrices,
+    String? email,
+    String? phone,
+    String? additionalInfo,
   }) {
     return BookingState(
       currentStep: currentStep ?? this.currentStep,
@@ -115,6 +139,12 @@ class BookingState extends Equatable {
       routePoints: routePoints ?? this.routePoints,
       distanceMiles: distanceMiles ?? this.distanceMiles,
       estimatedTime: estimatedTime ?? this.estimatedTime,
+      pricingModels: pricingModels ?? this.pricingModels,
+      offHours: offHours ?? this.offHours,
+      vehiclePrices: vehiclePrices ?? this.vehiclePrices,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      additionalInfo: additionalInfo ?? this.additionalInfo,
     );
   }
 
@@ -131,7 +161,7 @@ class BookingState extends Equatable {
       case BookingStep.selectRide:
         print('canProceed for selectRide: ${selectedVehicle !=
             null}, selectedVehicle: $selectedVehicle');
-        return selectedVehicle != null && error == null;
+        return selectedVehicle != null && vehiclePrices.containsKey(selectedVehicle) && error == null;
       case BookingStep.payment:
         return selectedPaymentMethod != null && error == null;
       default:

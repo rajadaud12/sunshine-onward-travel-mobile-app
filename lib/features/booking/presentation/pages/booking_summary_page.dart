@@ -1,3 +1,4 @@
+// booking_summary_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sot/core/config/app_colors.dart';
@@ -36,9 +37,9 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
 
   Map<String, dynamic> _getVehicleDetails(String? selectedVehicle) {
     final vehicles = [
-      {'name': 'Saloon', 'capacity': '2-3 person', 'price': 7.00, 'image': 'assets/images/car1.png'},
-      {'name': 'Estate', 'capacity': '3-4 person', 'price': 9.00, 'image': 'assets/images/car2.png'},
-      {'name': 'Executive', 'capacity': '3-4 person', 'price': 10.00, 'image': 'assets/images/car3.png'},
+      {'name': 'Saloon', 'capacity': '2-3 person', 'image': 'assets/images/car1.png'},
+      {'name': 'Estate', 'capacity': '3-4 person', 'image': 'assets/images/car2.png'},
+      {'name': 'Executive', 'capacity': '3-4 person', 'image': 'assets/images/car3.png'},
     ];
     return vehicles.firstWhere((v) => v['name'] == selectedVehicle, orElse: () => vehicles[1]);
   }
@@ -48,7 +49,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
     return BlocBuilder<BookingCubit, BookingState>(
       builder: (context, state) {
         final vehicle = _getVehicleDetails(state.selectedVehicle);
-        final price = vehicle['price'] as double;
+        final price = state.vehiclePrices[state.selectedVehicle ?? ''] ?? 0.0;
         final departureDate = state.departureDate ?? DateTime.now();
 
         const months = [
@@ -58,7 +59,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
         var hour12 = departureDate.hour % 12;
         hour12 = hour12 == 0 ? 12 : hour12;
         final departureTimeStr = '$hour12:${departureDate.minute.toString().padLeft(2, '0')} ${departureDate.hour < 12 ? 'AM' : 'PM'}';
-        final tripDuration = const Duration(hours: 3, minutes: 48);
+        final tripDuration = state.estimatedTime ?? const Duration(hours: 3, minutes: 48);
         final arrivalDate = departureDate.add(tripDuration);
         var arrivalHour12 = arrivalDate.hour % 12;
         arrivalHour12 = arrivalHour12 == 0 ? 12 : arrivalHour12;
@@ -455,7 +456,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                     children: [
                       // SMALL Back button (fixed width)
                       SizedBox(
-                        width: 140, // make this smaller to match design
+                        width: 100, // make this smaller to match design
                         child: GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Container(
@@ -593,4 +594,3 @@ class _DashLinePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

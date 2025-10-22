@@ -1,4 +1,4 @@
-// booking_bottom_sheet.dart
+// booking_bottom_sheet.dart (no changes)
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sot/core/config/app_colors.dart';
@@ -295,19 +295,16 @@ class BookingBottomSheet extends StatelessWidget {
       {
         'name': 'Saloon',
         'capacity': '2-3 person',
-        'price': 7.00,
         'image': 'assets/images/car1.png',
       },
       {
         'name': 'Estate',
         'capacity': '3-4 person',
-        'price': 9.00,
         'image': 'assets/images/car2.png',
       },
       {
         'name': 'Executive',
         'capacity': '3-4 person',
-        'price': 10.00,
         'image': 'assets/images/car3.png',
       },
     ];
@@ -329,6 +326,8 @@ class BookingBottomSheet extends StatelessWidget {
           itemBuilder: (context, index) {
             final vehicle = vehicles[index];
             final isSelected = state.selectedVehicle == vehicle['name'];
+            final calculatedPrice = state.vehiclePrices[vehicle['name'] as String] ?? 0.0;
+            final priceStr = calculatedPrice.toStringAsFixed(2).replaceAll('.', ',');
             return InkWell(
               onTap: () {
                 print('Tapped vehicle: ${vehicle['name']}');
@@ -371,7 +370,7 @@ class BookingBottomSheet extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '\$${ (vehicle['price'] as double).toStringAsFixed(2) }',
+                        '\$$priceStr',
                         style: TextStyle(
                           color: isSelected ? AppColors.white : AppColors.black,
                           fontSize: 16,
@@ -398,24 +397,11 @@ class BookingBottomSheet extends StatelessWidget {
     );
   }
 
-  double _getSelectedPrice() {
-    switch (state.selectedVehicle) {
-      case 'Saloon':
-        return 7.00;
-      case 'Estate':
-        return 9.00;
-      case 'Executive':
-        return 10.00;
-      default:
-        return 0.00;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isSelectRideStep = state.currentStep == BookingStep.selectRide;
     final canProceed = state.canProceed;
-    final selectedPrice = _getSelectedPrice();
+    final selectedPrice = state.vehiclePrices[state.selectedVehicle ?? ''] ?? 0.00;
     final priceStr = selectedPrice.toStringAsFixed(2).replaceAll('.', ',');
     const double bottomBarHeight = 69.0; // Calculated as 12*2 (vertical padding) + 45 (button height)
     return Container(
@@ -478,7 +464,7 @@ class BookingBottomSheet extends StatelessWidget {
                 children: [
                   if (state.currentStep != BookingStep.location)
                     SizedBox(
-                      width: 140,
+                      width: 100,
                       child: GestureDetector(
                         onTap: () => context.read<BookingCubit>().goToPreviousStep(),
                         child: Container(

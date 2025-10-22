@@ -1,11 +1,13 @@
-// booking_cubit.dart
+// booking_cubit.dart (updated to remove invalid cast)
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:sot/core/utils/api_service.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:sot/features/booking/state/booking_state.dart';
+
 class BookingCubit extends Cubit<BookingState> {
   final String googleMapsApiKey;
   final PolylinePoints _polylinePoints;
@@ -17,6 +19,11 @@ class BookingCubit extends Cubit<BookingState> {
   static const double fiveMilesMeters = 8046.72;
   static const double thirtyMilesMeters = 48280.32;
   static const double thirtyMiles = 30.0;
+
+  double _parseTime(String timeStr) {
+    final parts = timeStr.split(':').map(int.parse).toList();
+    return parts[0] + parts[1] / 60.0;
+  }
 
   void setStep(BookingStep step) {
     if (step == BookingStep.location && state.locations.isEmpty) {
@@ -51,13 +58,19 @@ class BookingCubit extends Cubit<BookingState> {
     print('Selecting vehicle: $vehicle');
     emit(state.copyWith(selectedVehicle: vehicle));
   }
-  void proceedToNextStep() {
+  Future<void> proceedToNextStep() async {
     switch (state.currentStep) {
       case BookingStep.location:
         if (state.canProceed) setStep(BookingStep.dateTime);
         break;
       case BookingStep.dateTime:
-        if (state.canProceed) setStep(BookingStep.selectRide);
+        if (state.canProceed) {
+          if (state.pricingModels.isEmpty) {
+            await fetchPricingRules();
+          }
+          setStep(BookingStep.selectRide);
+          calculateAllPrices();
+        }
         break;
       case BookingStep.selectRide:
         if (state.canProceed) setStep(BookingStep.payment);
@@ -92,6 +105,53 @@ class BookingCubit extends Cubit<BookingState> {
   void reset() => emit(const BookingState());
   void selectPaymentMethod(String method) => emit(state.copyWith(selectedPaymentMethod: method));
   void clearError() => emit(state.copyWith(error: null));
+
+  void setUserDetails({String? email, String? phone, String? additionalInfo}) {
+    emit(state.copyWith(
+      email: email ?? state.email,
+      phone: phone ?? state.phone,
+      additionalInfo: additionalInfo ?? state.additionalInfo,
+    ));
+  }
+
+  Future<void> createBooking() async {
+    if (state.isLoading) return;
+    emit(state.copyWith(isLoading: true, error: null));
+    try {
+      final List<Map<String, dynamic>> locationsJson = state.locations
+          .where((l) => l != null)
+          .cast<BookingLocation>()
+          .map((l) => l.toJson())
+          .toList();
+
+      final Map<String, dynamic> data = {
+        'locations': locationsJson,
+        'departureDate': state.departureDate?.toIso8601String(),
+        'selectedVehicle': state.selectedVehicle,
+        'price': state.vehiclePrices[state.selectedVehicle ?? ''],
+        'distanceMiles': state.distanceMiles,
+        'estimatedTimeMinutes': state.estimatedTime?.inMinutes,
+        'paymentMethod': state.selectedPaymentMethod,
+        'email': state.email,
+        'phone': state.phone,
+        'additionalInfo': state.additionalInfo,
+      };
+
+      final response = await ApiService.post('/bookings', data); // Removed invalid cast
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        emit(state.copyWith(currentStep: BookingStep.confirmation, error: null));
+        // Optionally reset() or emit success message
+        print('Booking created successfully');
+      } else {
+        emit(state.copyWith(error: 'Failed to create booking: ${response.statusCode}'));
+      }
+    } catch (e) {
+      emit(state.copyWith(error: 'Error creating booking: $e'));
+    } finally {
+      emit(state.copyWith(isLoading: false));
+    }
+  }
+
   Future<double?> getRouteDistance(List<BookingLocation> locations) async {
     if (locations.length < 2) return null;
     final pickupLatLng = LatLng(locations.first.lat, locations.first.lng);
@@ -342,5 +402,70 @@ class BookingCubit extends Cubit<BookingState> {
     const double averageSpeedMph = 25.0;
     final double hours = distanceMiles / averageSpeedMph;
     return Duration(seconds: (hours * 3600).round());
+  }
+
+  Future<void> fetchPricingRules() async {
+    if (state.pricingModels.isNotEmpty) return;
+    try {
+      final response = await ApiService.get('/rules');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('Fetched pricingModels: ${data['pricingModels']}');
+        print('Fetched offHours: ${data['offHours']}');
+        emit(state.copyWith(
+          pricingModels: List<Map<String, dynamic>>.from(data['pricingModels']),
+          offHours: List<Map<String, dynamic>>.from(data['offHours']),
+        ));
+      } else {
+        emit(state.copyWith(error: 'Failed to fetch pricing rules'));
+      }
+    } catch (e) {
+      emit(state.copyWith(error: 'Error fetching pricing rules: $e'));
+    }
+  }
+
+  void calculateAllPrices() {
+    if (state.distanceMiles == null || state.departureDate == null || state.pricingModels.isEmpty) return;
+
+    Map<String, double> prices = {};
+    final double distanceMiles = state.distanceMiles!;
+    final DateTime departure = state.departureDate!;
+    final double time = departure.hour + departure.minute / 60.0;
+
+    for (final String vehicle in ['Saloon', 'Estate', 'Executive']) {
+      final model = state.pricingModels.firstWhere(
+            (m) => m['category'] == vehicle,
+        orElse: () => <String, dynamic>{},
+      );
+      if (model.isEmpty) continue;
+
+      final double perMile = (model['perMilePrice'] as num).toDouble();
+
+      double total = distanceMiles * perMile;
+
+      final Iterable<Map<String, dynamic>> offHoursForCat = state.offHours.where((o) => o['category'] == vehicle);
+      for (final off in offHoursForCat) {
+        final double start = _parseTime(off['startTime'] as String);
+        final double end = _parseTime(off['endTime'] as String);
+        final bool inRange = (start <= end) ? time >= start && time < end : time >= start || time < end;
+        if (inRange) {
+          final String priceType = off['priceType'] as String;
+          final double value = (off['priceValue'] as num).toDouble();
+          if (priceType == 'fixed') {
+            total += value;
+          } else if (priceType == 'percentage') {
+            total *= (1 + value / 100);
+          } else if (priceType == 'multiplier') {
+            total *= value;
+          }
+          break; // apply only one
+        }
+      }
+
+      print('Calculated price for $vehicle: $total (perMile: $perMile, distMiles: $distanceMiles)');
+      prices[vehicle] = total;
+    }
+
+    emit(state.copyWith(vehiclePrices: prices));
   }
 }

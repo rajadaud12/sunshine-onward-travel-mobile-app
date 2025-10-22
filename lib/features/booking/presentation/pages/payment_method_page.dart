@@ -1,29 +1,27 @@
+// payment_method_page.dart (updated)
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_paypal_payment/flutter_paypal_payment.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:sot/core/config/app_colors.dart';
 import 'package:sot/features/booking/state/booking_cubit.dart';
 import 'package:sot/features/booking/state/booking_state.dart';
+import 'package:sot/core/utils/api_service.dart';
+import 'dart:convert';
 
 class PaymentMethodPage extends StatelessWidget {
   const PaymentMethodPage({super.key});
 
-  Map<String, dynamic> _getVehicleDetails(String? selectedVehicle) {
-    final vehicles = [
-      {'name': 'Saloon', 'price': 7.00},
-      {'name': 'Estate', 'price': 9.00},
-      {'name': 'Executive', 'price': 10.00},
-    ];
-    return vehicles.firstWhere((v) => v['name'] == selectedVehicle, orElse: () => vehicles[1]);
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Initialize Stripe with your publishable key (do this in main.dart for production)
+    Stripe.publishableKey = 'pk_test_51SJcy0GgEtC7ssqDGbRxwfTlaagmRNV5IyEaV3op3PrpkStn1gv2m84DhOFgCUW6A9qCVI87ikd90SOtnnnMvEme006Em91jXZ'; // Replace with your key
+
     return BlocBuilder<BookingCubit, BookingState>(
       builder: (context, state) {
         final cubit = context.read<BookingCubit>();
-        final vehicle = _getVehicleDetails(state.selectedVehicle);
-        final price = vehicle['price'] as double;
+        final price = state.vehiclePrices[state.selectedVehicle ?? ''] ?? 0.0;
         final priceStr = price.toStringAsFixed(2).replaceAll('.', ',');
 
         return Scaffold(
@@ -108,6 +106,7 @@ class PaymentMethodPage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 32),
+                          // Credit Card option (Stripe)
                           GestureDetector(
                             onTap: () => cubit.selectPaymentMethod('credit_card'),
                             child: Container(
@@ -160,6 +159,7 @@ class PaymentMethodPage extends StatelessWidget {
                               ),
                             ),
                           ),
+                          // PayPal option
                           GestureDetector(
                             onTap: () => cubit.selectPaymentMethod('paypal'),
                             child: Container(
@@ -263,8 +263,94 @@ class PaymentMethodPage extends StatelessWidget {
                       // BIG Confirm button with overlapping circular icon
                       Expanded(
                         child: GestureDetector(
-                          onTap: state.selectedPaymentMethod != null ? () {
-                            // booking logic
+                          onTap: state.selectedPaymentMethod != null ? () async {
+                            // Payment and booking logic
+                            if (state.selectedPaymentMethod == 'paypal') {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (BuildContext ctx) => PaypalCheckoutView(
+                                  sandboxMode: true,
+                                  clientId: "AY_eUsuoTnX9GryYnkWk7HeexkOu6B5vsqt4qVaqKTOr5zHmA27wu-ox11SEwcPES3W6ENrYPAHG6aq5",
+                                  secretKey: "EIzCBRA3Axnxz38QgczDLgwf9evQTK8zIqomS5LI2dsYZJXwnEt41jru2wGeuBgI28Hwkr4sG8Ifv8g2",
+                                  transactions: [
+                                    {
+                                      "amount": {
+                                        "total": price.toStringAsFixed(2),
+                                        "currency": "USD",
+                                        "details": {
+                                          "subtotal": price.toStringAsFixed(2),
+                                          "shipping": '0',
+                                          "shipping_discount": 0
+                                        }
+                                      },
+                                      "description": "Payment for ${state.selectedVehicle} ride from ${state.locations.first?.address} to ${state.locations.last?.address}.",
+                                      "item_list": {
+                                        "items": [
+                                          {
+                                            "name": "${state.selectedVehicle} Ride",
+                                            "quantity": 1,
+                                            "price": price.toStringAsFixed(2),
+                                            "currency": "USD"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ],
+                                  note: "Contact us for any questions on your order.",
+                                  onSuccess: (Map params) async {
+                                    print("PayPal Success: $params");
+                                    await cubit.createBooking();
+                                    Navigator.pop(ctx); // Pop PayPal view
+                                    Navigator.pop(context); // Pop PaymentMethodPage
+                                    // Optionally navigate to a confirmation page
+                                  },
+                                  onError: (error) {
+                                    print("PayPal Error: $error");
+                                    // Show snackbar or dialog for error
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Payment error: $error")));
+                                    Navigator.pop(context);
+                                  },
+                                  onCancel: () {
+                                    print('PayPal Cancelled');
+                                    // Handle cancel
+                                  },
+                                ),
+                              ));
+                            } else if (state.selectedPaymentMethod == 'credit_card') {
+                              try {
+                                // Fetch client secret from backend (amount in cents)
+                                final response = await ApiService.post(
+                                  '/payment/create-payment-intent', // Fixed path
+                                  {
+                                    'amount': (price * 100).toInt(),
+                                    'currency': 'usd',
+                                  },
+                                );
+                                if (response.statusCode == 200) {
+                                  final clientSecret = json.decode(response.body)['clientSecret']; // Assume backend returns { "clientSecret": "pi_..." }
+
+                                  // Init and present PaymentSheet
+                                  await Stripe.instance.initPaymentSheet(
+                                    paymentSheetParameters: SetupPaymentSheetParameters(
+                                      paymentIntentClientSecret: clientSecret,
+                                      merchantDisplayName: 'Your Ride App',
+                                      style: ThemeMode.light, // Or dark
+                                    ),
+                                  );
+                                  await Stripe.instance.presentPaymentSheet();
+
+                                  // On success (no exception thrown)
+                                  print("Stripe Success");
+                                  await cubit.createBooking();
+                                  Navigator.pop(context); // Pop PaymentMethodPage
+                                  // Optionally navigate to confirmation
+                                } else {
+                                  throw Exception('Failed to create payment intent: ${response.statusCode}');
+                                }
+                              } catch (e) {
+                                print("Stripe Error: $e");
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Payment error: $e")));
+                              }
+                            }
                           } : null,
                           child: Opacity(
                             opacity: state.selectedPaymentMethod != null ? 1.0 : 0.5,
