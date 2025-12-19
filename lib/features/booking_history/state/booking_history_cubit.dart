@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sot/core/utils/api_service.dart';
 import 'package:sot/features/booking_history/state/booking_history_state.dart';
 
 class BookingHistoryCubit extends Cubit<BookingHistoryState> {
@@ -6,43 +8,56 @@ class BookingHistoryCubit extends Cubit<BookingHistoryState> {
     loadBookings();
   }
 
-  void loadBookings() {
-    final now = DateTime.now();
-    final todayMidnight = DateTime(now.year, now.month, now.day);
-    final active = [
-      Booking(
-        pickup: 'State Park',
-        destination: 'Heathrow Airport',
-        departureTime: todayMidnight.add(const Duration(hours: 0)),
-        arrivalTime: todayMidnight.add(const Duration(hours: 0)).add(const Duration(hours: 7, minutes: 48)),
-        isCompleted: false,
-      ),
-    ];
-    var history = [
-      Booking(
-        pickup: 'State Park',
-        destination: 'Heathrow Airport',
-        departureTime: todayMidnight.subtract(const Duration(days: 1)).add(const Duration(hours: 0)),
-        arrivalTime: todayMidnight.subtract(const Duration(days: 1)).add(const Duration(hours: 0)).add(const Duration(hours: 7, minutes: 48)),
-        isCompleted: true,
-      ),
-      Booking(
-        pickup: 'State Park',
-        destination: 'Heathrow Airport',
-        departureTime: todayMidnight.subtract(const Duration(days: 2)).add(const Duration(hours: 0)),
-        arrivalTime: todayMidnight.subtract(const Duration(days: 2)).add(const Duration(hours: 0)).add(const Duration(hours: 7, minutes: 48)),
-        isCompleted: true,
-      ),
-    ];
-    // Sort history by departure time descending
-    history.sort((a, b) => b.departureTime.compareTo(a.departureTime));
-    print("✅ Active bookings loaded: ${active.length}");
-    emit(state.copyWith(activeBookings: active, fullHistoryBookings: history, historyBookings: history));
-    changeFilter(state.historyFilter);
+  Future<void> loadBookings() async {
+    if (state.isLoading) return;
+    emit(state.copyWith(isLoading: true, error: null));
+
+    try {
+      // Call the backend route that fetches user-specific bookings
+      final response = await ApiService.get('/bookings');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        final List<Booking> allBookings = data.map((item) => Booking.fromJson(item)).toList();
+
+        // Sort by date (newest first)
+        allBookings.sort((a, b) => b.departureTime.compareTo(a.departureTime));
+
+        // Separate Active (Pending/Accepted) vs History (Completed/Cancelled)
+        final active = allBookings.where((b) =>
+        b.status.toLowerCase() == 'pending' ||
+            b.status.toLowerCase() == 'accepted' ||
+            b.status.toLowerCase() == 'driver_assigned'
+        ).toList();
+
+        final history = allBookings.where((b) =>
+        b.status.toLowerCase() == 'completed' ||
+            b.status.toLowerCase() == 'cancelled'
+        ).toList();
+
+        emit(state.copyWith(
+          activeBookings: active,
+          fullHistoryBookings: history,
+          historyBookings: history, // Will be re-filtered immediately below
+          isLoading: false,
+        ));
+
+        // Re-apply current filter
+        changeFilter(state.historyFilter);
+      } else {
+        emit(state.copyWith(
+            isLoading: false,
+            error: 'Server Error: ${response.statusCode}'
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, error: 'Connection Error: $e'));
+    }
   }
 
   void changeFilter(String filter) {
     var filtered = _filterHistory(filter, state.fullHistoryBookings);
+    // Ensure sorted
     filtered.sort((a, b) => b.departureTime.compareTo(a.departureTime));
     emit(state.copyWith(historyFilter: filter, historyBookings: filtered));
   }

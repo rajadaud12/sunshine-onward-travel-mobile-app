@@ -98,7 +98,7 @@ class _SignInPageState extends State<SignInPage> {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 12),
                         ],
                       ),
                     ),
@@ -114,7 +114,7 @@ class _SignInPageState extends State<SignInPage> {
                         key: _formKey,
                         child: Column(
                           children: [
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 8),
                             CustomTextField(
                               label: 'Email',
                               hintText: 'Enter your Email',

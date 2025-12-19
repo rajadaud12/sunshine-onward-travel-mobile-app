@@ -1,6 +1,4 @@
-// lib/features/auth/presentation/pages/otp_page.dart
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sot/core/config/app_colors.dart';
@@ -19,7 +17,7 @@ class OtpPage extends StatefulWidget {
 
 class _OtpPageState extends State<OtpPage> {
   String _otp = '';
-  final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController()); // For clearing
+  final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
   Timer? _timer;
   int _countdown = 20;
 
@@ -39,6 +37,7 @@ class _OtpPageState extends State<OtpPage> {
   }
 
   void _startTimer() {
+    if (_timer != null) _timer!.cancel();
     _countdown = 20;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown == 0) {
@@ -66,18 +65,20 @@ class _OtpPageState extends State<OtpPage> {
           _clearOtpFields();
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
-          _clearOtpFields(); // Unlock/clear on error
+          _clearOtpFields();
         } else if (state is AuthOtpSent) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('OTP resent')));
-          _startTimer(); // Restart timer on resend
+          _startTimer();
         }
       },
       child: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, state) {
           final bool isLoading = state is AuthLoading;
           final String displayEmail = state.email ?? 'your email';
+
           return Scaffold(
             backgroundColor: AppColors.white,
+            // resizeToAvoidBottomInset: true is default, helps with keyboard handling
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
@@ -85,7 +86,7 @@ class _OtpPageState extends State<OtpPage> {
                 icon: Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.primary,
                     shape: BoxShape.circle,
                   ),
@@ -96,63 +97,79 @@ class _OtpPageState extends State<OtpPage> {
                 },
               ),
             ),
-            body: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Please check your email',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.black,
+            body: SafeArea(
+              child: SingleChildScrollView(
+                // This prevents the overflow error when the keyboard appears
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Please check your email',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.black,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'We\'ve sent a code to $displayEmail',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                    const SizedBox(height: 8),
+                    Text(
+                      'We\'ve sent a code to $displayEmail',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 48),
-                  OtpWidget(
-                    controllers: _controllers, // Pass for clearing
-                    onComplete: (otp) {
-                      _otp = otp;
-                      if (!isLoading && _otp.length == 4) {
-                        context.read<AuthCubit>().verifyOtp(_otp);
+                    const SizedBox(height: 48),
+                    OtpWidget(
+                      controllers: _controllers,
+                      onComplete: (otp) {
+                        _otp = otp;
+                        // Auto-verify when 4 digits are entered
+                        if (!isLoading && _otp.length == 4) {
+                          context.read<AuthCubit>().verifyOtp(_otp);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 48),
+                    isLoading
+                        ? const Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.primary))
+                        : CustomButton(
+                      text: 'Verify',
+                      onPressed: () {
+                        if (_otp.length == 4) {
+                          context.read<AuthCubit>().verifyOtp(_otp);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Enter full OTP')));
+                        }
+                      },
+                      color: AppColors.primary,
+                      height: 64.0,
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: (_countdown == 0 && !isLoading && state.email != null)
+                          ? () {
+                        context.read<AuthCubit>().sendOtp(state.email!, null);
                       }
-                    },
-                  ),
-                  const SizedBox(height: 48),
-                  isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                      : CustomButton(
-                    text: 'Verify',
-                    onPressed: () {
-                      if (_otp.length == 4) {
-                        context.read<AuthCubit>().verifyOtp(_otp);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter full OTP')));
-                      }
-                    },
-                    color: AppColors.primary,
-                    height: 64.0,
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: (_countdown == 0 && !isLoading && state.email != null) ? () {
-                      context.read<AuthCubit>().sendOtp(state.email!, null);
-                    } : null,
-                    child: Text(
-                      'Send code again ${(_countdown ~/ 60).toString().padLeft(2, '0')}:${(_countdown % 60).toString().padLeft(2, '0')}',
-                      style: const TextStyle(color: AppColors.textSecondary),
+                          : null,
+                      child: Text(
+                        _countdown > 0
+                            ? 'Send code again ${(_countdown ~/ 60).toString().padLeft(2, '0')}:${(_countdown % 60).toString().padLeft(2, '0')}'
+                            : 'Resend Code',
+                        style: TextStyle(
+                          color: _countdown > 0
+                              ? AppColors.textSecondary
+                              : AppColors.primary,
+                          fontWeight: _countdown == 0 ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );

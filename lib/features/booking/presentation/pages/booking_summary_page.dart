@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Added for fetching user email
 import 'package:sot/core/config/app_colors.dart';
 import 'package:sot/core/widgets/custom_text_field.dart';
 import 'package:sot/features/booking/presentation/pages/payment_method_page.dart';
@@ -21,8 +22,12 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController(text: 'daudraja185@gmail.com');
-    _phoneController = TextEditingController(text: '03229370009');
+
+    // Fetch current user email from Firebase
+    final user = FirebaseAuth.instance.currentUser;
+
+    _emailController = TextEditingController(text: user?.email ?? '');
+    _phoneController = TextEditingController(text: ''); // Started empty as requested
     _additionalController = TextEditingController();
   }
 
@@ -47,6 +52,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
   Widget build(BuildContext context) {
     return BlocBuilder<BookingCubit, BookingState>(
       builder: (context, state) {
+        final cubit = context.read<BookingCubit>(); // Reference to cubit
         final vehicle = _getVehicleDetails(state.selectedVehicle);
         final price = state.vehiclePrices[state.selectedVehicle ?? ''] ?? 0.0;
         final departureDate = state.departureDate ?? DateTime.now();
@@ -70,6 +76,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
         return Scaffold(
           body: Stack(
             children: [
+              // Header
               Container(
                 height: MediaQuery.of(context).padding.top + 120,
                 decoration: const BoxDecoration(
@@ -93,11 +100,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                             color: AppColors.white,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
-                            Icons.close,
-                            color: AppColors.black,
-                            size: 20,
-                          ),
+                          child: const Icon(Icons.close, color: AppColors.black, size: 20),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -106,17 +109,12 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                           padding: const EdgeInsets.only(right: 50),
                           child: Text(
                             'Booking Summary',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
                               color: AppColors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                            ) ??
-                                const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  color: AppColors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            ),
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -140,94 +138,42 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Vehicle section
+                          // Vehicle Card
                           Container(
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               color: AppColors.card,
-                              borderRadius: BorderRadius.only(
+                              borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(20),
                                 topRight: Radius.circular(20),
                               ),
-                              border: Border(
-                                left: BorderSide(color: AppColors.border, width: 1),
-                                right: BorderSide(color: AppColors.border, width: 1),
-                                bottom: BorderSide(color: AppColors.border, width: 1),
-                                top: BorderSide(color: AppColors.border, width: 1),
-                              ),
+                              border: Border.all(color: AppColors.border),
                             ),
                             padding: const EdgeInsets.all(16),
                             child: Row(
                               children: [
-                                Image.asset(
-                                  vehicle['image'] as String,
-                                  width: 120,
-                                  height: 80,
-                                  fit: BoxFit.contain,
-                                ),
+                                Image.asset(vehicle['image'] as String, width: 120, height: 80, fit: BoxFit.contain),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        vehicle['name'] as String,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: Colors.black,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ) ??
-                                            const TextStyle(
-                                              fontFamily: 'Poppins',
-                                              color: Colors.black,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                      ),
-                                      Text(
-                                        vehicle['capacity'] as String,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: const Color(0xFF656565),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w400,
-                                        ) ??
-                                            const TextStyle(
-                                              fontFamily: 'Poppins',
-                                              color: Color(0xFF656565),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                      ),
+                                      Text(vehicle['name'] as String, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+                                      Text(vehicle['capacity'] as String, style: const TextStyle(fontSize: 12, color: Color(0xFF656565))),
                                     ],
                                   ),
                                 ),
-                                Text(
-                                  '\$$priceStr',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.primary,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w400,
-                                  ) ??
-                                      const TextStyle(
-                                        fontFamily: 'Poppins',
-                                        color: AppColors.primary,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                ),
+                                Text('\$$priceStr', style: const TextStyle(color: AppColors.primary, fontSize: 18, fontWeight: FontWeight.w700)),
                               ],
                             ),
                           ),
-                          // Other info
+                          // Route Details
                           Container(
                             decoration: const BoxDecoration(
-                              borderRadius: BorderRadius.only(
-                                bottomLeft: Radius.circular(20),
-                                bottomRight: Radius.circular(20),
-                              ),
+                              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
                               border: Border(
-                                left: BorderSide(color: AppColors.border, width: 1),
-                                right: BorderSide(color: AppColors.border, width: 1),
-                                bottom: BorderSide(color: AppColors.border, width: 1),
+                                left: BorderSide(color: AppColors.border),
+                                right: BorderSide(color: AppColors.border),
+                                bottom: BorderSide(color: AppColors.border),
                               ),
                             ),
                             child: Padding(
@@ -238,179 +184,28 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Departure Date',
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: const Color(0xFF656565),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w400,
-                                            ) ??
-                                                const TextStyle(
-                                                  fontFamily: 'Poppins',
-                                                  color: Color(0xFF656565),
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                          ),
-                                          Text(
-                                            dateStr,
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: Colors.black,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w400,
-                                            ) ??
-                                                const TextStyle(
-                                                  fontFamily: 'Poppins',
-                                                  color: Colors.black,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Departure Time',
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: const Color(0xFF656565),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w400,
-                                            ) ??
-                                                const TextStyle(
-                                                  fontFamily: 'Poppins',
-                                                  color: Color(0xFF656565),
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                          ),
-                                          Text(
-                                            departureTimeStr,
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: Colors.black,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w400,
-                                            ) ??
-                                                const TextStyle(
-                                                  fontFamily: 'Poppins',
-                                                  color: Colors.black,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w400,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
+                                      _buildInfoColumn('Departure Date', dateStr),
+                                      _buildInfoColumn('Departure Time', departureTimeStr),
                                     ],
                                   ),
                                   const SizedBox(height: 24),
+                                  // Pickup
                                   Row(
                                     children: [
-                                      Container(
-                                        width: 20,
-                                        height: 20,
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.success,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Center(
-                                          child: Container(
-                                            width: 10,
-                                            height: 10,
-                                            decoration: const BoxDecoration(
-                                              color: AppColors.white,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
+                                      const Icon(Icons.circle, color: AppColors.success, size: 20),
                                       const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          pickup,
-                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color: Colors.black,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                          ) ??
-                                              const TextStyle(
-                                                fontFamily: 'Poppins',
-                                                color: Colors.black,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                        ),
-                                      ),
-                                      Text(
-                                        departureTimeStr,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: const Color(0xFFAAAAAA),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w400,
-                                        ) ??
-                                            const TextStyle(
-                                              fontFamily: 'Poppins',
-                                              color: Color(0xFFAAAAAA),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                      ),
+                                      Expanded(child: Text(pickup, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+                                      Text(departureTimeStr, style: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 12)),
                                     ],
                                   ),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(left: 9),
-                                      child: SizedBox(
-                                        width: 2,
-                                        height: 20,
-                                        child: CustomPaint(
-                                          painter: _DashLinePainter(dashHeight: 4, gap: 4, color: AppColors.border),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                  _buildDashLine(),
+                                  // Destination
                                   Row(
                                     children: [
-                                      const Icon(
-                                        Icons.location_pin,
-                                        color: AppColors.primary,
-                                        size: 24,
-                                      ),
+                                      const Icon(Icons.location_pin, color: AppColors.primary, size: 24),
                                       const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          destination,
-                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            color: Colors.black,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                          ) ??
-                                              const TextStyle(
-                                                fontFamily: 'Poppins',
-                                                color: Colors.black,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                        ),
-                                      ),
-                                      Text(
-                                        arrivalTimeStr,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                          color: const Color(0xFFAAAAAA),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w400,
-                                        ) ??
-                                            const TextStyle(
-                                              fontFamily: 'Poppins',
-                                              color: Color(0xFFAAAAAA),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                      ),
+                                      Expanded(child: Text(destination, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+                                      Text(arrivalTimeStr, style: const TextStyle(color: Color(0xFFAAAAAA), fontSize: 12)),
                                     ],
                                   ),
                                 ],
@@ -418,131 +213,44 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                             ),
                           ),
                           const SizedBox(height: 32),
-                          CustomTextField(
-                            label: 'Email',
-                            hintText: 'Enter your email',
-                            controller: _emailController,
-                          ),
+                          // Input Fields
+                          CustomTextField(label: 'Email', hintText: 'Enter your email', controller: _emailController),
                           const SizedBox(height: 16),
-                          CustomTextField(
-                            label: 'Phone No',
-                            hintText: 'Enter your phone number',
-                            controller: _phoneController,
-                          ),
+                          CustomTextField(label: 'Phone No', hintText: 'Enter your phone number', controller: _phoneController),
                           const SizedBox(height: 16),
-                          CustomTextField(
-                            label: 'Additional Information (Optional)',
-                            hintText: 'Flight Number etc.',
-                            controller: _additionalController,
-                          ),
+                          CustomTextField(label: 'Additional Information (Optional)', hintText: 'Flight Number etc.', controller: _additionalController),
                         ],
                       ),
                     ),
                   ),
                 ),
               ),
+              // Bottom Confirm Button
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.card,
-                    border: const Border(top: BorderSide(color: AppColors.border)),
+                    border: Border(top: BorderSide(color: AppColors.border)),
                   ),
                   child: Row(
                     children: [
-                      SizedBox(
-                        width: 100,
-                        child: GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            height: 45,
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              borderRadius: BorderRadius.circular(50),
-                              border: Border.all(color: AppColors.black, width: 1),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Icon(Icons.arrow_back, size: 18, color: AppColors.black),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Back',
-                                  style: TextStyle(
-                                    color: AppColors.black,
-                                    fontSize: 14,
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
+                      _buildBackButton(context),
                       const SizedBox(width: 12),
-
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
+                            // SYNC UI VALUES TO CUBIT STATE
+                            cubit.setUserDetails(
+                              email: _emailController.text,
+                              phone: _phoneController.text,
+                              additionalInfo: _additionalController.text,
+                            );
+
                             Navigator.push(context, MaterialPageRoute(builder: (context) => const PaymentMethodPage()));
                           },
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            alignment: Alignment.center,
-                            children: [
-                              Container(
-                                height: 45,
-                                padding: const EdgeInsets.symmetric(horizontal: 44),
-                                decoration: BoxDecoration(
-                                  color: AppColors.black,
-                                  borderRadius: BorderRadius.circular(50),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Text(
-                                      'Confirm',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontFamily: 'Poppins',
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      '\$${double.parse(priceStr.replaceAll(',', '.')).toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontFamily: 'Poppins',
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              Positioned(
-                                right: 4,
-                                child: Container(
-                                  height: 35,
-                                  width: 35,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.black, width: 1),
-                                  ),
-                                  child: const Center(
-                                    child: Icon(Icons.chevron_right, size: 22, color: AppColors.black),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          child: _buildConfirmButton(priceStr),
                         ),
                       ),
                     ],
@@ -555,7 +263,91 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
       },
     );
   }
+
+  // --- Helper Widgets to keep build clean ---
+
+  Widget _buildInfoColumn(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFF656565), fontSize: 12)),
+        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w400)),
+      ],
+    );
+  }
+
+  Widget _buildDashLine() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 9),
+        child: SizedBox(
+          width: 2,
+          height: 20,
+          child: CustomPaint(painter: _DashLinePainter(dashHeight: 4, gap: 4, color: AppColors.border)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackButton(BuildContext context) {
+    return SizedBox(
+      width: 100,
+      child: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          height: 45,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(50),
+            border: Border.all(color: AppColors.black, width: 1),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.arrow_back, size: 18, color: AppColors.black),
+              SizedBox(width: 8),
+              Text('Back', style: TextStyle(color: AppColors.black, fontSize: 14, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConfirmButton(String priceStr) {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        Container(
+          height: 45,
+          padding: const EdgeInsets.symmetric(horizontal: 44),
+          decoration: BoxDecoration(color: AppColors.black, borderRadius: BorderRadius.circular(50)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Confirm', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 12),
+              Text('\$${double.parse(priceStr.replaceAll(',', '.')).toStringAsFixed(2)}',
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 4,
+          child: Container(
+            height: 35,
+            width: 35,
+            decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: AppColors.black)),
+            child: const Icon(Icons.chevron_right, size: 22, color: AppColors.black),
+          ),
+        ),
+      ],
+    );
+  }
 }
+
 class _DashLinePainter extends CustomPainter {
   final double dashWidth;
   final double dashHeight;

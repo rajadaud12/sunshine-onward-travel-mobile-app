@@ -104,36 +104,48 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> googleLogin() async {
     emit(const AuthLoading());
     try {
-      // Use the instance or construct with scopes if you need extra scopes
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        scopes: <String>[
-          'email',
-          // add other scopes only if required by your backend
-        ],
-      );
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: <String>['email']);
 
-      // Trigger the interactive sign-in
+      // Force account choice to ensure fresh login if needed
+      await googleSignIn.signOut();
+
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) {
-        // user canceled the sign-in flow
         emit(const AuthError(message: 'Google sign-in cancelled'));
         return;
       }
 
-      // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Create a new credential for Firebase. idToken is the important one.
       final OAuthCredential credential = GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
-        // accessToken: googleAuth.accessToken, // optional — may be null on some platforms
+        accessToken: googleAuth.accessToken,
       );
 
-      // Sign in to Firebase with the credential
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      // 1. Sign in to Firebase Authentication
+      final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final User? user = userCredential.user;
 
-      emit(const AuthSuccess());
+      if (user != null) {
+        // 2. Sync with Backend to create/update User Document
+        try {
+          await ApiService.post('/auth/google-login-sync', {
+            'uid': user.uid,
+            'email': user.email,
+            'displayName': user.displayName,
+            'photoURL': user.photoURL,
+          });
+          print('Google user synced with backend successfully');
+        } catch (apiError) {
+          // Log error but allow login to proceed if auth succeeded
+          print('Backend sync failed: $apiError');
+        }
+
+        emit(const AuthSuccess());
+      } else {
+        emit(const AuthError(message: 'Google Sign-In failed: User is null'));
+      }
+
     } on FirebaseAuthException catch (e) {
       emit(AuthError(message: e.message ?? 'Google login failed'));
     } catch (e) {

@@ -113,42 +113,73 @@ class BookingCubit extends Cubit<BookingState> {
       additionalInfo: additionalInfo ?? state.additionalInfo,
     ));
   }
-
   Future<void> createBooking() async {
+    // 1. Prevent multiple simultaneous requests
     if (state.isLoading) return;
     emit(state.copyWith(isLoading: true, error: null));
+
     try {
-      final List<Map<String, dynamic>> locationsJson = state.locations
+      // 2. Format locations into the list of objects the backend expects
+      // The backend uses locations[0].address, so we must provide that key
+      final List<Map<String, dynamic>> locationData = state.locations
           .where((l) => l != null)
-          .cast<BookingLocation>()
-          .map((l) => l.toJson())
+          .map((l) => {
+        'address': l!.address,
+        'lat': l.lat,
+        'lng': l.lng,
+      })
           .toList();
 
-      final Map<String, dynamic> data = {
-        'locations': locationsJson,
+      // 3. Construct the payload using the EXACT keys the backend destructures:
+      // { locations, departureDate, selectedVehicle, price, email, phone, additionalInfo }
+      final Map<String, dynamic> payload = {
+        'locations': locationData,
         'departureDate': state.departureDate?.toIso8601String(),
         'selectedVehicle': state.selectedVehicle,
         'price': state.vehiclePrices[state.selectedVehicle ?? ''],
+        'email': state.email ?? '', // Provide empty string if null to pass backend validation
+        'phone': state.phone ?? '', // Provide empty string if null to pass backend validation
+        'additionalInfo': state.additionalInfo ?? '',
+
+        // Metadata fields for the 'bookingData' object in backend
         'distanceMiles': state.distanceMiles,
         'estimatedTimeMinutes': state.estimatedTime?.inMinutes,
         'paymentMethod': state.selectedPaymentMethod,
-        'email': state.email,
-        'phone': state.phone,
-        'additionalInfo': state.additionalInfo,
       };
 
-      final response = await ApiService.post('/bookings', data); // Removed invalid cast
+      // Log the payload for local debugging
+      print('--- SENDING BOOKING PAYLOAD ---');
+      print(jsonEncode(payload));
+
+      final response = await ApiService.post('/bookings', payload);
+
       if (response.statusCode == 201 || response.statusCode == 200) {
-        emit(state.copyWith(currentStep: BookingStep.confirmation, error: null));
-        // Optionally reset() or emit success message
-        print('Booking created successfully');
+        // SUCCESS: Data is in DB and backend returned success status
+        emit(state.copyWith(
+          currentStep: BookingStep.confirmation,
+          isLoading: false,
+          error: null,
+        ));
+        print('Booking successfully finalized in frontend.');
       } else {
-        emit(state.copyWith(error: 'Failed to create booking: ${response.statusCode}'));
+        // FAILURE: Log the body to see why the backend says "400" after saving
+        print('--- SERVER ERROR RESPONSE ---');
+        print('Status: ${response.statusCode}');
+        print('Body: ${response.body}');
+
+        final Map<String, dynamic> errorData = json.decode(response.body);
+        emit(state.copyWith(
+          isLoading: false,
+          error: errorData['message'] ?? 'Server returned ${response.statusCode}',
+        ));
       }
     } catch (e) {
-      emit(state.copyWith(error: 'Error creating booking: $e'));
-    } finally {
-      emit(state.copyWith(isLoading: false));
+      print('--- CUBIT EXCEPTION ---');
+      print(e.toString());
+      emit(state.copyWith(
+        isLoading: false,
+        error: 'Connection error: $e',
+      ));
     }
   }
 

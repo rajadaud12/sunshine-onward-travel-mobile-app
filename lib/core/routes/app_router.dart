@@ -12,6 +12,8 @@ import 'package:sot/features/booking/presentation/widgets/booking_location_summa
 import 'package:sot/features/booking_history/presentation/pages/booking_history_page.dart';
 import 'package:sot/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:sot/features/auth/presentation/pages/welcome_page.dart';
+import 'package:sot/features/profile_settings/presentation/pages/profile_page.dart';
+import 'package:sot/features/profile_settings/presentation/pages/setting_page.dart';
 
 
 class AppRouter {
@@ -49,6 +51,12 @@ class AppRouter {
 
       case AppRoutes.forgotPassword:
         return MaterialPageRoute(builder: (_) => const ForgotPasswordPage());
+
+      case AppRoutes.profile:
+        return MaterialPageRoute(builder: (_) => const ProfilePage());
+
+      case AppRoutes.settings:
+        return MaterialPageRoute(builder: (_) => const SettingsPage());
 
 
 

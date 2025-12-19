@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sot/core/config/app_colors.dart';
@@ -34,14 +33,19 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
     return BlocListener<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is AuthSuccess) {
-          Navigator.pushNamed(context, AppRoutes.bookingHome);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.bookingHome,
+                (route) => false,
+          );
         } else if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
         }
       },
       child: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, state) {
-          final emailToShow = state.email ?? 'No email found';
           final bool isLoading = state is AuthLoading;
           return Scaffold(
             backgroundColor: AppColors.white,
@@ -52,7 +56,7 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                 icon: Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.primary,
                     shape: BoxShape.circle,
                   ),
@@ -63,108 +67,111 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                 },
               ),
             ),
-            body: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Create your Password',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.black,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Account: $emailToShow',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Please type something you\'ll remember',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    CustomTextField(
-                      label: 'Password',
-                      hintText: 'Enter your Password',
-                      obscureText: _obscurePassword,
-                      controller: _passwordController,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                          color: AppColors.placeholder,
+            // Added SafeArea and SingleChildScrollView to prevent overflow
+            body: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Create your Password',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.black,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Please type something you\'ll remember',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      CustomTextField(
+                        label: 'Password',
+                        hintText: 'Enter your Password',
+                        obscureText: _obscurePassword,
+                        controller: _passwordController,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: AppColors.placeholder,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          if (value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
                         },
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) return 'Password must be at least 6 characters';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                      label: 'Confirm Password',
-                      hintText: 'Confirm your password',
-                      obscureText: _obscureConfirmPassword,
-                      controller: _confirmPasswordController,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                          color: AppColors.placeholder,
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        label: 'Confirm Password',
+                        hintText: 'Confirm your password',
+                        obscureText: _obscureConfirmPassword,
+                        controller: _confirmPasswordController,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: AppColors.placeholder,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword =
+                              !_obscureConfirmPassword;
+                            });
+                          },
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _obscureConfirmPassword = !_obscureConfirmPassword;
-                          });
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please confirm your password';
+                          }
+                          if (value != _passwordController.text) {
+                            return 'Passwords do not match';
+                          }
+                          return null;
                         },
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 32),
-                    isLoading
-                        ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-                        : CustomButton(
-                      text: 'Sign Up',
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          final String? email = state.email;
-                          print('CreatePasswordPage -> Sign Up pressed. email: $email');
-                          context.read<AuthCubit>().createAccount(
-                            _passwordController.text,
-                            email: email,
-                          );
-                        }
-                      },
-                      color: AppColors.primary,
-                      height: 64.0,
-                    ),
-                  ],
+                      const SizedBox(height: 48),
+                      isLoading
+                          ? const Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.primary))
+                          : CustomButton(
+                        text: 'Sign Up',
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            final String? email = state.email;
+                            context.read<AuthCubit>().createAccount(
+                              _passwordController.text,
+                              email: email,
+                            );
+                          }
+                        },
+                        color: AppColors.primary,
+                        height: 64.0,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

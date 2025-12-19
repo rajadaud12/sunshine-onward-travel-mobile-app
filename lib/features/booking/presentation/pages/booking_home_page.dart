@@ -43,8 +43,11 @@ class _BookingHomePageState extends State<BookingHomePage> {
       try {
         await GoogleSignIn().signOut();
       } catch (_) {
+        // Ignore Google sign-out errors
       }
-      Navigator.pushNamedAndRemoveUntil(ctx, AppRoutes.welcome, (route) => false);
+      if (ctx.mounted) {
+        Navigator.pushNamedAndRemoveUntil(ctx, AppRoutes.welcome, (route) => false);
+      }
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(content: Text('Error signing out: ${e.toString()}')),
@@ -66,19 +69,41 @@ class _BookingHomePageState extends State<BookingHomePage> {
             ),
             TextButton(
               onPressed: () => Navigator.of(dctx).pop(true),
-              child: const Text('Logout'),
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
             ),
           ],
         );
       },
     );
     if (confirmed == true) {
-      await _performSignOut(ctx);
+      if (ctx.mounted) await _performSignOut(ctx);
     }
+  }
+
+  Widget _buildInitialPlaceholder(String initial, {required double size}) {
+    return Center(
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: AppColors.white,
+          fontSize: size * 0.5, // Adjusted for better proportion
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // 1. Get current Firebase User
+    final user = FirebaseAuth.instance.currentUser;
+    final String userName = user?.displayName ?? 'Guest User';
+    final String userEmail = user?.email ?? 'No Email';
+    final String? userPhotoUrl = user?.photoURL;
+
+    // Get the first letter of the name for the placeholder
+    final String userInitial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+
     return BlocConsumer<BookingCubit, BookingState>(
       listener: (context, state) {
         if (state.error != null) {
@@ -89,8 +114,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
         }
       },
       builder: (context, state) {
-        final hasBottomSheet = state.currentStep != null;
-        final bottomOffset = hasBottomSheet ? 140.0 : 24.0;
         final showRouteInfo = state.locations.length >= 2 &&
             state.locations.every((loc) => loc != null) &&
             state.distanceMiles != null &&
@@ -118,181 +141,167 @@ class _BookingHomePageState extends State<BookingHomePage> {
           drawer: Drawer(
             elevation: 0,
             shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.zero,
+              borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
             ),
             backgroundColor: AppColors.white,
-            child: SafeArea(
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Column(
+              children: [
+                // --- Sleek Profile Header ---
+                Container(
+                  padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
+                  decoration: const BoxDecoration(
                     color: AppColors.white,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.border,
-                              width: 1,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: userPhotoUrl == null ? AppColors.primary : AppColors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(30),
-                            child: Image.network(
-                              'https://via.placeholder.com/60x60/CCCCCC/FFFFFF?text=U',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: AppColors.white,
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: AppColors.placeholder,
-                                    size: 30,
-                                  ),
-                                );
-                              },
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(30),
+                          child: userPhotoUrl != null
+                              ? Image.network(
+                            userPhotoUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                _buildInitialPlaceholder(userInitial, size: 56),
+                          )
+                              : _buildInitialPlaceholder(userInitial, size: 56),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              userName,
+                              style: const TextStyle(
+                                color: AppColors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'Poppins',
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                'User Name',
-                                style: TextStyle(
-                                  color: AppColors.black,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            const SizedBox(height: 4),
+                            Text(
+                              userEmail,
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 13,
+                                fontFamily: 'Poppins',
                               ),
-                              SizedBox(height: 4),
-                              Text(
-                                'user@example.com',
-                                style: TextStyle(
-                                  color: AppColors.black,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Divider after header
+                const Divider(height: 1, color: Color(0xFFEEEEEE)),
+
+                // --- Menu Items ---
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    children: [
+                      _buildDrawerItem(
+                        icon: Icons.history,
+                        label: 'My Bookings',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamed(context, AppRoutes.bookings);
+                        },
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.person_outline_rounded,
+                        label: 'Profile',
+                        onTap: () {
+                          Navigator.pop(context); // Close Drawer
+                          Navigator.pushNamed(context, AppRoutes.profile);
+                        },
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                        child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.help_outline_rounded,
+                        label: 'Help & Support',
+                        onTap: () => Navigator.pop(context),
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.settings_outlined,
+                        label: 'Settings',
+                        onTap: () {
+                          Navigator.pop(context); // Close Drawer
+                          Navigator.pushNamed(context, AppRoutes.settings);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                // --- Bottom Logout Section ---
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  child: SafeArea(
+                    top: false,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _confirmAndSignOut(context);
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: const [
+                            Icon(Icons.logout_rounded, color: Colors.red, size: 20),
+                            SizedBox(width: 12),
+                            Text(
+                              'Log Out',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                  Expanded(
-                    child: ListView(
-                      padding: EdgeInsets.zero,
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.book, color: AppColors.primary),
-                          title: const Text(
-                            'Bookings',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.pushNamed(context, AppRoutes.bookings);
-                          },
-                        ),
-                        const Divider(color: AppColors.border, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.textsms_sharp, color: AppColors.primary),
-                          title: const Text(
-                            'Chat',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                        const Divider(color: AppColors.border, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.help, color: AppColors.primary),
-                          title: const Text(
-                            'Help',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                        const Divider(color: AppColors.border, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.settings, color: AppColors.primary),
-                          title: const Text(
-                            'Settings',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                        const Divider(color: AppColors.border, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.article, color: AppColors.primary),
-                          title: const Text(
-                            'Terms and Conditions',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                        const Divider(color: AppColors.border, height: 1),
-                        ListTile(
-                          leading: const Icon(Icons.privacy_tip, color: AppColors.primary),
-                          title: const Text(
-                            'Privacy Policy',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                        const Divider(color: AppColors.border, height: 1),
-                        // === Logout item in Drawer ===
-                        ListTile(
-                          leading: const Icon(Icons.logout, color: AppColors.primary),
-                          title: const Text(
-                            'Logout',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context); // close drawer
-                            _confirmAndSignOut(context);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           body: Stack(
             children: [
               const BookingMapView(),
+              // Top Buttons (Menu & Profile Icon)
               if (state.currentStep == BookingStep.location || state.currentStep == BookingStep.dateTime)
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 20,
@@ -301,6 +310,7 @@ class _BookingHomePageState extends State<BookingHomePage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Menu Button
                       Container(
                         width: 44,
                         height: 44,
@@ -316,29 +326,24 @@ class _BookingHomePageState extends State<BookingHomePage> {
                           ],
                         ),
                         child: IconButton(
-                          onPressed: () {
-                            _scaffoldKey.currentState!.openDrawer();
-                          },
-                          icon: const Icon(
-                            Icons.menu,
-                            color: AppColors.white,
-                            size: 20,
-                          ),
+                          onPressed: () => _scaffoldKey.currentState!.openDrawer(),
+                          icon: const Icon(Icons.menu, color: AppColors.white, size: 20),
                         ),
                       ),
+
+                      // Route Info (Center)
                       if (showRouteInfo)
                         Expanded(
                           child: Center(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               decoration: BoxDecoration(
                                 color: AppColors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: AppColors.border),
+                                borderRadius: BorderRadius.circular(30),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 4,
+                                    blurRadius: 10,
                                     offset: const Offset(0, 2),
                                   ),
                                 ],
@@ -347,45 +352,42 @@ class _BookingHomePageState extends State<BookingHomePage> {
                                 '${state.distanceMiles!.toStringAsFixed(1)} mi • ${state.estimatedTime!.inMinutes} min',
                                 style: const TextStyle(
                                   color: AppColors.black,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.white,
-                            width: 2,
+
+                      // Profile Icon (Right)
+                      GestureDetector(
+                        onTap: () => _scaffoldKey.currentState!.openDrawer(),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: userPhotoUrl == null ? AppColors.primary : AppColors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(22),
-                          child: Image.network(
-                            'https://via.placeholder.com/44x44/CCCCCC/FFFFFF?text=U',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: AppColors.white,
-                                child: const Icon(
-                                  Icons.person,
-                                  color: AppColors.placeholder,
-                                  size: 24,
-                                ),
-                              );
-                            },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(22),
+                            child: userPhotoUrl != null
+                                ? Image.network(
+                              userPhotoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _buildInitialPlaceholder(userInitial, size: 44),
+                            )
+                                : _buildInitialPlaceholder(userInitial, size: 44),
                           ),
                         ),
                       ),
@@ -413,6 +415,29 @@ class _BookingHomePageState extends State<BookingHomePage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.black87, size: 22),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.black87,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          fontFamily: 'Poppins',
+        ),
+      ),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      horizontalTitleGap: 4,
+      visualDensity: const VisualDensity(horizontal: 0, vertical: -1),
     );
   }
 }

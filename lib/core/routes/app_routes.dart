@@ -10,10 +10,11 @@ class AppRoutes {
   static const String bookingSummary = '/booking-summary';
   static const String paymentMethod = '/choose-payment-method';
   static const String bookingsList = '/bookings-list';
-  static const String profile = '/profile';
   static const String welcome = '/welcome';
   static const String bookings = '/bookings';
   static const String forgotPassword = '/forgotPassword';
+  static const String profile = '/profile';
+  static const String settings = '/settings';
 
 
 }

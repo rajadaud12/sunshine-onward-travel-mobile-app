@@ -1,4 +1,3 @@
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,12 +9,16 @@ import 'package:sot/features/booking/state/booking_state.dart';
 import 'package:sot/core/utils/api_service.dart';
 import 'dart:convert';
 
+import 'package:sot/features/booking_history/presentation/pages/booking_history_page.dart';
+
+
 class PaymentMethodPage extends StatelessWidget {
   const PaymentMethodPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    Stripe.publishableKey = 'pk_test_51SJcy0GgEtC7ssqDGbRxwfTlaagmRNV5IyEaV3op3PrpkStn1gv2m84DhOFgCUW6A9qCVI87ikd90SOtnnnMvEme006Em91jXZ'; // Replace with your key
+    // Ideally, move this key to a secure config or env file
+    Stripe.publishableKey = 'pk_test_51SJcy0GgEtC7ssqDGbRxwfTlaagmRNV5IyEaV3op3PrpkStn1gv2m84DhOFgCUW6A9qCVI87ikd90SOtnnnMvEme006Em91jXZ';
 
     return BlocBuilder<BookingCubit, BookingState>(
       builder: (context, state) {
@@ -26,7 +29,7 @@ class PaymentMethodPage extends StatelessWidget {
         return Scaffold(
           body: Stack(
             children: [
-
+              // --- Header Section ---
               Container(
                 height: MediaQuery.of(context).padding.top + 120,
                 decoration: const BoxDecoration(
@@ -83,6 +86,7 @@ class PaymentMethodPage extends StatelessWidget {
                 ),
               ),
 
+              // --- Main Content ---
               Positioned.fill(
                 top: MediaQuery.of(context).padding.top + 100,
                 bottom: 80,
@@ -97,18 +101,20 @@ class PaymentMethodPage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: const Text(
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 20),
+                            child: Text(
                               'Choose Payment Method',
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black),
                             ),
                           ),
                           const SizedBox(height: 32),
+
+                          // Credit Card Option
                           GestureDetector(
                             onTap: () => cubit.selectPaymentMethod('credit_card'),
                             child: Container(
-                              padding: EdgeInsets.symmetric(vertical: 16),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                               decoration: BoxDecoration(
                                 color: AppColors.card,
                                 border: Border.all(color: AppColors.border),
@@ -157,6 +163,8 @@ class PaymentMethodPage extends StatelessWidget {
                               ),
                             ),
                           ),
+
+                          // Paypal Option
                           GestureDetector(
                             onTap: () => cubit.selectPaymentMethod('paypal'),
                             child: Container(
@@ -164,7 +172,7 @@ class PaymentMethodPage extends StatelessWidget {
                                 color: AppColors.card,
                                 border: Border.all(color: AppColors.border),
                               ),
-                              padding: EdgeInsets.symmetric(horizontal: 20,vertical: 20),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                               child: Row(
                                 children: [
                                   Container(
@@ -214,16 +222,19 @@ class PaymentMethodPage extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // --- Bottom Action Bar ---
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.card,
-                    border: const Border(top: BorderSide(color: AppColors.border)),
+                    border: Border(top: BorderSide(color: AppColors.border)),
                   ),
                   child: Row(
                     children: [
+                      // Back Button
                       SizedBox(
                         width: 100,
                         child: GestureDetector(
@@ -255,10 +266,14 @@ class PaymentMethodPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
+
+                      // Confirm Button
                       Expanded(
                         child: GestureDetector(
-                          onTap: state.selectedPaymentMethod != null ? () async {
+                          // Disable tap if no method selected or if loading
+                          onTap: (state.selectedPaymentMethod != null && !state.isLoading) ? () async {
                             if (state.selectedPaymentMethod == 'paypal') {
+                              // --- PayPal Flow ---
                               Navigator.of(context).push(MaterialPageRoute(
                                 builder: (BuildContext ctx) => PaypalCheckoutView(
                                   sandboxMode: true,
@@ -291,22 +306,30 @@ class PaymentMethodPage extends StatelessWidget {
                                   note: "Contact us for any questions on your order.",
                                   onSuccess: (Map params) async {
                                     print("PayPal Success: $params");
+                                    // 1. Create Booking in Backend
                                     await cubit.createBooking();
-                                    Navigator.pop(ctx);
-                                    Navigator.pop(context);
+
+                                    // 2. Clear stack and go to Bookings Page
+                                    if (context.mounted) {
+                                      Navigator.of(context).pushAndRemoveUntil(
+                                        MaterialPageRoute(builder: (context) => const BookingsPage()),
+                                            (Route<dynamic> route) => false, // Removes all previous routes
+                                      );
+                                    }
                                   },
                                   onError: (error) {
                                     print("PayPal Error: $error");
                                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Payment error: $error")));
-                                    Navigator.pop(context);
+                                    Navigator.pop(context); // Close Paypal view
                                   },
                                   onCancel: () {
                                     print('PayPal Cancelled');
-
+                                    Navigator.pop(context); // Close Paypal view
                                   },
                                 ),
                               ));
                             } else if (state.selectedPaymentMethod == 'credit_card') {
+                              // --- Stripe Flow ---
                               try {
                                 final response = await ApiService.post(
                                   '/payment/create-payment-intent',
@@ -328,8 +351,16 @@ class PaymentMethodPage extends StatelessWidget {
                                   await Stripe.instance.presentPaymentSheet();
 
                                   print("Stripe Success");
+                                  // 1. Create Booking in Backend
                                   await cubit.createBooking();
-                                  Navigator.pop(context);
+
+                                  // 2. Clear stack and go to Bookings Page
+                                  if (context.mounted) {
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(builder: (context) => const BookingsPage()),
+                                          (Route<dynamic> route) => false, // Removes all previous routes
+                                    );
+                                  }
                                 } else {
                                   throw Exception('Failed to create payment intent: ${response.statusCode}');
                                 }
@@ -340,12 +371,12 @@ class PaymentMethodPage extends StatelessWidget {
                             }
                           } : null,
                           child: Opacity(
-                            opacity: state.selectedPaymentMethod != null ? 1.0 : 0.5,
+                            opacity: (state.selectedPaymentMethod != null && !state.isLoading) ? 1.0 : 0.5,
                             child: Stack(
                               clipBehavior: Clip.none,
                               alignment: Alignment.center,
                               children: [
-                                // main black pill
+                                // Main Black Pill Button
                                 Container(
                                   height: 45,
                                   padding: const EdgeInsets.symmetric(horizontal: 44),
@@ -356,18 +387,8 @@ class PaymentMethodPage extends StatelessWidget {
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Text(
-                                        'Confirm',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontFamily: 'Poppins',
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
                                       Text(
-                                        '\$${double.parse(priceStr.replaceAll(',', '.')).toStringAsFixed(2)}',
+                                        state.isLoading ? 'Processing...' : 'Confirm',
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 12,
@@ -375,25 +396,39 @@ class PaymentMethodPage extends StatelessWidget {
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
+                                      if (!state.isLoading) ...[
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          '\$${double.parse(priceStr.replaceAll(',', '.')).toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),
 
-                                Positioned(
-                                  right: 4,
-                                  child: Container(
-                                    height: 35,
-                                    width: 35,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: AppColors.black, width: 1),
-                                    ),
-                                    child: const Center(
-                                      child: Icon(Icons.chevron_right, size: 22, color: AppColors.black),
+                                // Arrow Icon Circle
+                                if (!state.isLoading)
+                                  Positioned(
+                                    right: 4,
+                                    child: Container(
+                                      height: 35,
+                                      width: 35,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: AppColors.black, width: 1),
+                                      ),
+                                      child: const Center(
+                                        child: Icon(Icons.chevron_right, size: 22, color: AppColors.black),
+                                      ),
                                     ),
                                   ),
-                                ),
                               ],
                             ),
                           ),
@@ -403,6 +438,15 @@ class PaymentMethodPage extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // --- Loading Overlay (Optional but recommended) ---
+              if (state.isLoading)
+                Container(
+                  color: Colors.black.withOpacity(0.3),
+                  child: const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                ),
             ],
           ),
         );
