@@ -1,4 +1,4 @@
-// booking_bottom_sheet.dart (no changes)
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sot/core/config/app_colors.dart';
@@ -403,7 +403,7 @@ class BookingBottomSheet extends StatelessWidget {
     final canProceed = state.canProceed;
     final selectedPrice = state.vehiclePrices[state.selectedVehicle ?? ''] ?? 0.00;
     final priceStr = selectedPrice.toStringAsFixed(2).replaceAll('.', ',');
-    const double bottomBarHeight = 69.0; // Calculated as 12*2 (vertical padding) + 45 (button height)
+    const double bottomBarHeight = 69.0;
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -422,10 +422,8 @@ class BookingBottomSheet extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Drag handle section (now part of scrollable content but starts at top)
                   Container(
                     padding: const EdgeInsets.fromLTRB(0, 18, 0, 20),
-                    // Removed inner decoration as outer handles the rounding
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -523,22 +521,23 @@ class BookingBottomSheet extends StatelessWidget {
                                   isSelectRideStep ? 'Checkout' : 'Next',
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                if (isSelectRideStep) const SizedBox(width: 24),
+                                if (isSelectRideStep) const SizedBox(width: 12),
                                 if (isSelectRideStep)
                                   Text(
-                                    '\$$priceStr',
+                                    '\$${double.parse(priceStr.replaceAll(',', '.')).toStringAsFixed(2)}',
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       fontFamily: 'Poppins',
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
+
                               ],
                             ),
                           ),

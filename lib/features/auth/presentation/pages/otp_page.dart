@@ -54,16 +54,16 @@ class _OtpPageState extends State<OtpPage> {
       controller.clear();
     }
     _otp = '';
-    setState(() {}); // Refresh UI
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthCubit, AuthState>(  // Use global cubit
+    return BlocListener<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is AuthOtpVerified) {
           Navigator.pushNamed(context, AppRoutes.createPassword);
-          _clearOtpFields(); // Clear on success (optional)
+          _clearOtpFields();
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
           _clearOtpFields(); // Unlock/clear on error

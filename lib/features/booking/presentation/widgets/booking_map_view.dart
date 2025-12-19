@@ -1,4 +1,4 @@
-// booking_map_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -46,7 +46,7 @@ class _BookingMapViewState extends State<BookingMapView> {
             width: 5,
           ));
         } else if (locationPoints.length >= 2) {
-          // Fallback to straight line if routePoints not available (e.g., fetch failed or in progress)
+          // Fallback to straight line if routePoints not available
           polylines.add(Polyline(
             polylineId: const PolylineId('route'),
             points: locationPoints,

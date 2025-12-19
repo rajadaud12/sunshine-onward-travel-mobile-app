@@ -1,4 +1,4 @@
-// payment_method_page.dart (updated)
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,7 +15,6 @@ class PaymentMethodPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize Stripe with your publishable key (do this in main.dart for production)
     Stripe.publishableKey = 'pk_test_51SJcy0GgEtC7ssqDGbRxwfTlaagmRNV5IyEaV3op3PrpkStn1gv2m84DhOFgCUW6A9qCVI87ikd90SOtnnnMvEme006Em91jXZ'; // Replace with your key
 
     return BlocBuilder<BookingCubit, BookingState>(
@@ -27,7 +26,7 @@ class PaymentMethodPage extends StatelessWidget {
         return Scaffold(
           body: Stack(
             children: [
-              // Adjusted pink header with text slightly shifted right
+
               Container(
                 height: MediaQuery.of(context).padding.top + 120,
                 decoration: const BoxDecoration(
@@ -40,7 +39,7 @@ class PaymentMethodPage extends StatelessWidget {
                     right: 16,
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center, // Keep general centering
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
@@ -61,7 +60,7 @@ class PaymentMethodPage extends StatelessWidget {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(right: 50), // Shift text slightly right
+                          padding: const EdgeInsets.only(right: 50),
                           child: Text(
                             'Payment Method',
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -75,7 +74,7 @@ class PaymentMethodPage extends StatelessWidget {
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
                                 ),
-                            textAlign: TextAlign.center, // Maintain centered appearance
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
@@ -83,7 +82,7 @@ class PaymentMethodPage extends StatelessWidget {
                   ),
                 ),
               ),
-              // Main content
+
               Positioned.fill(
                 top: MediaQuery.of(context).padding.top + 100,
                 bottom: 80,
@@ -106,7 +105,6 @@ class PaymentMethodPage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 32),
-                          // Credit Card option (Stripe)
                           GestureDetector(
                             onTap: () => cubit.selectPaymentMethod('credit_card'),
                             child: Container(
@@ -159,7 +157,6 @@ class PaymentMethodPage extends StatelessWidget {
                               ),
                             ),
                           ),
-                          // PayPal option
                           GestureDetector(
                             onTap: () => cubit.selectPaymentMethod('paypal'),
                             child: Container(
@@ -217,7 +214,6 @@ class PaymentMethodPage extends StatelessWidget {
                   ),
                 ),
               ),
-              // Bottom bar
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Container(
@@ -228,9 +224,8 @@ class PaymentMethodPage extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      // SMALL Back button (fixed width)
                       SizedBox(
-                        width: 140,
+                        width: 100,
                         child: GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Container(
@@ -260,11 +255,9 @@ class PaymentMethodPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // BIG Confirm button with overlapping circular icon
                       Expanded(
                         child: GestureDetector(
                           onTap: state.selectedPaymentMethod != null ? () async {
-                            // Payment and booking logic
                             if (state.selectedPaymentMethod == 'paypal') {
                               Navigator.of(context).push(MaterialPageRoute(
                                 builder: (BuildContext ctx) => PaypalCheckoutView(
@@ -299,50 +292,44 @@ class PaymentMethodPage extends StatelessWidget {
                                   onSuccess: (Map params) async {
                                     print("PayPal Success: $params");
                                     await cubit.createBooking();
-                                    Navigator.pop(ctx); // Pop PayPal view
-                                    Navigator.pop(context); // Pop PaymentMethodPage
-                                    // Optionally navigate to a confirmation page
+                                    Navigator.pop(ctx);
+                                    Navigator.pop(context);
                                   },
                                   onError: (error) {
                                     print("PayPal Error: $error");
-                                    // Show snackbar or dialog for error
                                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Payment error: $error")));
                                     Navigator.pop(context);
                                   },
                                   onCancel: () {
                                     print('PayPal Cancelled');
-                                    // Handle cancel
+
                                   },
                                 ),
                               ));
                             } else if (state.selectedPaymentMethod == 'credit_card') {
                               try {
-                                // Fetch client secret from backend (amount in cents)
                                 final response = await ApiService.post(
-                                  '/payment/create-payment-intent', // Fixed path
+                                  '/payment/create-payment-intent',
                                   {
                                     'amount': (price * 100).toInt(),
                                     'currency': 'usd',
                                   },
                                 );
                                 if (response.statusCode == 200) {
-                                  final clientSecret = json.decode(response.body)['clientSecret']; // Assume backend returns { "clientSecret": "pi_..." }
+                                  final clientSecret = json.decode(response.body)['clientSecret'];
 
-                                  // Init and present PaymentSheet
                                   await Stripe.instance.initPaymentSheet(
                                     paymentSheetParameters: SetupPaymentSheetParameters(
                                       paymentIntentClientSecret: clientSecret,
                                       merchantDisplayName: 'Your Ride App',
-                                      style: ThemeMode.light, // Or dark
+                                      style: ThemeMode.light,
                                     ),
                                   );
                                   await Stripe.instance.presentPaymentSheet();
 
-                                  // On success (no exception thrown)
                                   print("Stripe Success");
                                   await cubit.createBooking();
-                                  Navigator.pop(context); // Pop PaymentMethodPage
-                                  // Optionally navigate to confirmation
+                                  Navigator.pop(context);
                                 } else {
                                   throw Exception('Failed to create payment intent: ${response.statusCode}');
                                 }
@@ -361,7 +348,7 @@ class PaymentMethodPage extends StatelessWidget {
                                 // main black pill
                                 Container(
                                   height: 45,
-                                  padding: const EdgeInsets.symmetric(horizontal: 44), // leave room for the circular icon visually
+                                  padding: const EdgeInsets.symmetric(horizontal: 44),
                                   decoration: BoxDecoration(
                                     color: AppColors.black,
                                     borderRadius: BorderRadius.circular(50),
@@ -373,17 +360,17 @@ class PaymentMethodPage extends StatelessWidget {
                                         'Confirm',
                                         style: TextStyle(
                                           color: Colors.white,
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           fontFamily: 'Poppins',
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      const SizedBox(width: 24),
+                                      const SizedBox(width: 12),
                                       Text(
-                                        '\$$priceStr',
+                                        '\$${double.parse(priceStr.replaceAll(',', '.')).toStringAsFixed(2)}',
                                         style: const TextStyle(
                                           color: Colors.white,
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           fontFamily: 'Poppins',
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -392,9 +379,8 @@ class PaymentMethodPage extends StatelessWidget {
                                   ),
                                 ),
 
-                                // white circular icon overlapping on the right
                                 Positioned(
-                                  right: 4, // overlap a bit outside the pill for the same visual
+                                  right: 4,
                                   child: Container(
                                     height: 35,
                                     width: 35,

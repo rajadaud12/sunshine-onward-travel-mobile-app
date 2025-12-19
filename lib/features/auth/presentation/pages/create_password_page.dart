@@ -1,4 +1,4 @@
-// lib/features/auth/presentation/pages/create_password_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sot/core/config/app_colors.dart';
@@ -79,7 +79,6 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
-                    // Show the email being used (helps debugging & UX)
                     Text(
                       'Account: $emailToShow',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -156,7 +155,6 @@ class _CreatePasswordPageState extends State<CreatePasswordPage> {
                         if (_formKey.currentState!.validate()) {
                           final String? email = state.email;
                           print('CreatePasswordPage -> Sign Up pressed. email: $email');
-                          // Pass email explicitly to createAccount to avoid any ambiguity
                           context.read<AuthCubit>().createAccount(
                             _passwordController.text,
                             email: email,

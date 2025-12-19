@@ -1,4 +1,3 @@
-// booking_summary_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sot/core/config/app_colors.dart';
@@ -71,7 +70,6 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
         return Scaffold(
           body: Stack(
             children: [
-              // Adjusted pink header with text slightly shifted right
               Container(
                 height: MediaQuery.of(context).padding.top + 120,
                 decoration: const BoxDecoration(
@@ -84,7 +82,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                     right: 16,
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center, // Keep general centering
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
@@ -105,7 +103,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(right: 50), // Shift text slightly right
+                          padding: const EdgeInsets.only(right: 50),
                           child: Text(
                             'Booking Summary',
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -119,7 +117,7 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
                                 ),
-                            textAlign: TextAlign.center, // Maintain centered appearance
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
@@ -443,7 +441,6 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                   ),
                 ),
               ),
-              // Bottom bar (unchanged as per previous fix)
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Container(
@@ -454,9 +451,8 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                   ),
                   child: Row(
                     children: [
-                      // SMALL Back button (fixed width)
                       SizedBox(
-                        width: 100, // make this smaller to match design
+                        width: 100,
                         child: GestureDetector(
                           onTap: () => Navigator.pop(context),
                           child: Container(
@@ -488,7 +484,6 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
 
                       const SizedBox(width: 12),
 
-                      // BIG Confirm button with overlapping circular icon
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
@@ -498,10 +493,9 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                             clipBehavior: Clip.none,
                             alignment: Alignment.center,
                             children: [
-                              // main black pill
                               Container(
                                 height: 45,
-                                padding: const EdgeInsets.symmetric(horizontal: 44), // leave room for the circular icon visually
+                                padding: const EdgeInsets.symmetric(horizontal: 44),
                                 decoration: BoxDecoration(
                                   color: AppColors.black,
                                   borderRadius: BorderRadius.circular(50),
@@ -513,17 +507,17 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                                       'Confirm',
                                       style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 14,
+                                        fontSize: 12,
                                         fontFamily: 'Poppins',
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    const SizedBox(width: 24),
+                                    const SizedBox(width: 12),
                                     Text(
-                                      '\$$priceStr',
+                                      '\$${double.parse(priceStr.replaceAll(',', '.')).toStringAsFixed(2)}',
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 14,
+                                        fontSize: 12,
                                         fontFamily: 'Poppins',
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -532,9 +526,8 @@ class _BookingSummaryPageState extends State<BookingSummaryPage> {
                                 ),
                               ),
 
-                              // white circular icon overlapping on the right
                               Positioned(
-                                right: 4, // overlap a bit outside the pill for the same visual
+                                right: 4,
                                 child: Container(
                                   height: 35,
                                   width: 35,

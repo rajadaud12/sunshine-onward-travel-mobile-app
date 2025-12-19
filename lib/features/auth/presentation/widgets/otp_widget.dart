@@ -23,7 +23,7 @@ class OtpWidget extends StatelessWidget {
       children: List.generate(length, (index) {
         return SizedBox(
           width: 76,
-          height: 70,
+          height: 80,
           child: TextField(
             controller: internalControllers[index],
             focusNode: focusNodes[index],

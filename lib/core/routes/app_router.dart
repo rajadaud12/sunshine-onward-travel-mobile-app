@@ -14,7 +14,6 @@ import 'package:sot/features/onboarding/presentation/pages/onboarding_page.dart'
 import 'package:sot/features/auth/presentation/pages/welcome_page.dart';
 
 
-/// Handles navigation between screens
 class AppRouter {
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {

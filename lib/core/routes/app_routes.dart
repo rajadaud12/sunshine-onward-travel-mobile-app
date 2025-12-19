@@ -1,4 +1,3 @@
-/// Centralized route names for navigation.
 class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String signIn = '/sign-in';
@@ -17,5 +16,4 @@ class AppRoutes {
   static const String forgotPassword = '/forgotPassword';
 
 
-// Add more as features expand
 }

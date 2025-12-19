@@ -75,7 +75,6 @@ class BookingLocationSummary extends StatelessWidget {
     );
   }
 
-  // Icons for pickup / waypoint / destination
   Widget _pickupIcon() {
     return Container(
       width: 18,
@@ -122,12 +121,10 @@ class BookingLocationSummary extends StatelessWidget {
     );
   }
 
-  // fixed sized add pill so we can align its center with divider
   static const double _rowHeight = 40;
   static const double _addPillWidth = 84;
   static const double _addPillHeight = 36;
 
-  // width used by the close icon button (approx)
   static const double _closeBtnWidth = 36;
 
   Widget _addPill(BuildContext context, {required bool enabled}) {
@@ -183,7 +180,6 @@ class BookingLocationSummary extends StatelessWidget {
 
     if (enabled) return pill;
 
-    // when disabled show a tooltip explaining why (max waypoints reached)
     return Tooltip(
       message: 'Maximum of 3 waypoints reached',
       child: AbsorbPointer(child: pill),
@@ -210,15 +206,11 @@ class BookingLocationSummary extends StatelessWidget {
     final locations = state.locations;
     final len = locations.length;
 
-    // number of intermediate waypoints (excluding pickup + destination)
     final int waypointCount = (len >= 2) ? (len - 2) : 0;
     final bool canAddWaypoint = waypointCount < 3;
 
-    // place add pill so its center overlaps the divider between row 0 and row 1
     final double addPillTop = _rowHeight - (_addPillHeight / 2);
 
-    // Reserve enough right-side space for the add pill so row content never goes under it.
-    // trailingReserve = pill width + small margin
     final double trailingReserve = _addPillWidth + 12;
 
     return Container(
@@ -315,7 +307,6 @@ class BookingLocationSummary extends StatelessWidget {
               ),
             ],
           ),
-          // Positioned add pill so its center overlaps the divider after the first row
           if (len >= 1)
             Positioned(
               right: 12,

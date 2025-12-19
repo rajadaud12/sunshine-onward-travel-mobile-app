@@ -39,15 +39,11 @@ class _BookingHomePageState extends State<BookingHomePage> {
   Future<void> _performSignOut(BuildContext ctx) async {
     final messenger = ScaffoldMessenger.of(ctx);
     try {
-      // Sign out from Firebase
       await FirebaseAuth.instance.signOut();
-      // If you use Google sign-in, also sign out Google
       try {
         await GoogleSignIn().signOut();
       } catch (_) {
-        // ignore if GoogleSignIn isn't configured
       }
-      // Navigate to login and remove all previous routes
       Navigator.pushNamedAndRemoveUntil(ctx, AppRoutes.welcome, (route) => false);
     } catch (e) {
       messenger.showSnackBar(
@@ -105,13 +101,13 @@ class _BookingHomePageState extends State<BookingHomePage> {
         switch (state.currentStep) {
           case BookingStep.location:
             final len = state.locations.length;
-            initialChildSize = 0.35 + 0.05 * (len - 2).clamp(0, 3);
+            initialChildSize = 0.40 + 0.05 * (len - 2).clamp(0, 3);
             break;
           case BookingStep.dateTime:
-            initialChildSize = 0.55;
+            initialChildSize = 0.65;
             break;
           case BookingStep.selectRide:
-            initialChildSize = 0.50;
+            initialChildSize = 0.60;
             break;
           default:
             initialChildSize = 0.5;
@@ -403,7 +399,6 @@ class _BookingHomePageState extends State<BookingHomePage> {
                   right: 20,
                   child: BookingLocationSummary(state: state),
                 ),
-              // Bottom sheet (existing)
               if (state.currentStep != null)
                 DraggableScrollableSheet(
                   key: ValueKey(state.currentStep),
